@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
@@ -66,23 +66,20 @@ export default function LobbyPage() {
     return (matches as Match[]).filter(m => m._id !== featured._id);
   }, [matches, featured]);
 
-  // Measure the board container so we can size the board to fill it exactly
-  const boardContainerRef = useRef<HTMLDivElement>(null);
-  const [boardSize, setBoardSize] = useState(480);
-  useEffect(() => {
-    const el = boardContainerRef.current;
+  // Measure the board container so we can size the board to fill it exactly.
+  // Use a callback ref so the observer is set up as soon as the element mounts,
+  // even if it mounts after the initial effect cycle (loading guard was active).
+  const [boardSize, setBoardSize] = useState(320);
+  const boardContainerCallbackRef = (el: HTMLDivElement | null) => {
     if (!el) return;
     const ro = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect;
-      // Go board height = size * 0.8; chess/checkers height = size * 0.78
-      // Fit the larger dimension while leaving a small breathing room
-      const byWidth  = Math.floor(width  * 0.96);
-      const byHeight = Math.floor(height / 0.82);
-      setBoardSize(Math.min(byWidth, byHeight, 640));
+      const byWidth  = Math.floor(width * 0.74);
+      const byHeight = Math.floor((height - 28) / 0.8);
+      setBoardSize(Math.min(byWidth, byHeight, 500));
     });
     ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  };
 
   if (!agents || !matches || !highlights || !leaderboard) {
     return <div style={{ padding: 40, color: "var(--ink-300)" }}>LOADING…</div>;
@@ -195,7 +192,7 @@ export default function LobbyPage() {
 
           {/* Board — fills all remaining space */}
           <div
-            ref={boardContainerRef}
+            ref={boardContainerCallbackRef}
             style={{ flex: 1, minHeight: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 12, overflow: "hidden" }}
           >
             {boardEl}

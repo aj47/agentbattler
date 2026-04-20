@@ -22,13 +22,22 @@ const GAMES = [
 ];
 
 const MATCHES = [
-  { slug: 'm1845', game: 'chess',    a: 'knight_gpt',   b: 'glorp_9',      move: 34,  viewers: 1247, status: 'live',     phase: 'middlegame', winProb: 0.62 },
-  { slug: 'm1846', game: 'checkers', a: 'tofu_tactics', b: 'king_me_v2',   move: 22,  viewers: 412,  status: 'live',     phase: 'endgame',    winProb: 0.81 },
-  { slug: 'm1847', game: 'go19',     a: 'go_master_v3', b: 'stone_singer', move: 127, viewers: 8934, status: 'featured', phase: 'middlegame', winProb: 0.58 },
-  { slug: 'm1848', game: 'chess',    a: 'quiet_storm',  b: 'baron_bluff',  move: 41,  viewers: 3201, status: 'live',     phase: 'endgame',    winProb: 0.73 },
-  { slug: 'm1849', game: 'chess',    a: 'MEGA_BRAIN',   b: 'rook_botto',   move: 18,  viewers: 892,  status: 'live',     phase: 'opening',    winProb: 0.51 },
-  { slug: 'm1850', game: 'checkers', a: 'checkmate42',  b: 'null_pointer', move: 29,  viewers: 227,  status: 'live',     phase: 'middlegame', winProb: 0.44 },
-  { slug: 'm1851', game: 'go19',     a: 'glorp_9',      b: 'tofu_tactics', move: 88,  viewers: 1502, status: 'starting', phase: 'opening',    winProb: 0.50 },
+  { slug: 'm1845', game: 'chess',    a: 'knight_gpt',   b: 'glorp_9',      move: 34,  viewers: 1247, status: 'live',     phase: 'midgame',  winProb: 0.62 },
+  { slug: 'm1846', game: 'checkers', a: 'tofu_tactics', b: 'king_me_v2',   move: 22,  viewers: 412,  status: 'live',     phase: 'endgame',  winProb: 0.81 },
+  { slug: 'm1847', game: 'go19',     a: 'go_master_v3', b: 'stone_singer', move: 127, viewers: 8934, status: 'featured', phase: 'midgame',  winProb: 0.58 },
+  { slug: 'm1848', game: 'chess',    a: 'quiet_storm',  b: 'baron_bluff',  move: 41,  viewers: 3201, status: 'live',     phase: 'endgame',  winProb: 0.73 },
+  { slug: 'm1849', game: 'chess',    a: 'MEGA_BRAIN',   b: 'rook_botto',   move: 18,  viewers: 892,  status: 'live',     phase: 'opening',  winProb: 0.51 },
+  { slug: 'm1850', game: 'checkers', a: 'checkmate42',  b: 'null_pointer', move: 29,  viewers: 227,  status: 'live',     phase: 'midgame',  winProb: 0.44 },
+  { slug: 'm1851', game: 'go19',     a: 'glorp_9',      b: 'tofu_tactics', move: 88,  viewers: 1502, status: 'live',     phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1852', game: 'chess',    a: 'null_pointer', b: 'tofu_tactics', move: 11,  viewers: 674,  status: 'live',     phase: 'opening',  winProb: 0.48 },
+  { slug: 'm1853', game: 'go19',     a: 'knight_gpt',   b: 'quiet_storm',  move: 54,  viewers: 2108, status: 'live',     phase: 'midgame',  winProb: 0.55 },
+  { slug: 'm1854', game: 'checkers', a: 'glorp_9',      b: 'baron_bluff',  move: 17,  viewers: 389,  status: 'live',     phase: 'opening',  winProb: 0.60 },
+  { slug: 'm1855', game: 'chess',    a: 'stone_singer', b: 'MEGA_BRAIN',   move: 62,  viewers: 1834, status: 'live',     phase: 'endgame',  winProb: 0.69 },
+  { slug: 'm1856', game: 'go19',     a: 'tofu_tactics', b: 'rook_botto',   move: 39,  viewers: 721,  status: 'live',     phase: 'opening',  winProb: 0.53 },
+  { slug: 'm1857', game: 'checkers', a: 'king_me_v2',   b: 'knight_gpt',   move: 0,   viewers: 156,  status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1858', game: 'chess',    a: 'quiet_storm',  b: 'go_master_v3', move: 28,  viewers: 4412, status: 'live',     phase: 'midgame',  winProb: 0.47 },
+  { slug: 'm1859', game: 'go19',     a: 'null_pointer', b: 'baron_bluff',  move: 73,  viewers: 918,  status: 'live',     phase: 'midgame',  winProb: 0.56 },
+  { slug: 'm1860', game: 'checkers', a: 'rook_botto',   b: 'stone_singer', move: 0,   viewers: 203,  status: 'starting', phase: 'opening',  winProb: 0.50 },
 ];
 
 const HIGHLIGHTS = [
@@ -151,7 +160,7 @@ export const run = internalMutation({
   args: {},
   handler: async (ctx) => {
     // clear
-    for (const t of ["agents","games","matches","highlights","chatMessages","tickerItems","bracketMatches","profileMatches","featured","submissions"] as const) {
+    for (const t of ["agents","games","matches","matchStates","highlights","chatMessages","tickerItems","bracketMatches","profileMatches","featured","submissions"] as const) {
       const rows = await ctx.db.query(t).collect();
       for (const r of rows) await ctx.db.delete(r._id);
     }
