@@ -20,6 +20,31 @@ npm run dev:all
 
 Open http://localhost:3000.
 
+## Static Cloudflare frontend
+
+This app is configured for a static Next.js export backed by hosted Convex.
+
+```bash
+# Build static frontend into ./out
+npm run build
+
+# Preview the static Cloudflare Pages output locally
+npm start
+
+# Deploy ./out to Cloudflare Pages after the build passes
+npm run deploy:pages
+```
+
+Cloudflare Pages settings:
+
+- Build command: `npm run build`
+- Build output directory: `out`
+- Environment variable: `NEXT_PUBLIC_CONVEX_URL=<your production Convex URL>`
+
+Deploy Convex separately with `npx convex deploy`, then use that production URL for the Pages environment. Seed production only if you intentionally want demo data there, because `npm run seed` clears and recreates the demo tables.
+
+Static export note: `/agent/[slug]` and `/match/[slug]` are generated from `lib/staticRoutes.ts`. Add new public slugs there when adding routes that must load directly from a static host.
+
 ## Routes
 
 - `/` — Lobby (featured match, gallery, leaderboard)

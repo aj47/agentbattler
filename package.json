@@ -7,8 +7,9 @@
     "dev:convex": "convex dev",
     "dev:all": "concurrently -n next,convex -c cyan,magenta \"npm:dev\" \"npm:dev:convex\"",
     "build": "next build",
-    "start": "next start",
-    "seed": "convex run seed:run"
+    "start": "wrangler pages dev out",
+    "seed": "convex run seed:run",
+    "deploy:pages": "wrangler pages deploy out --project-name agentbattler"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
@@ -23,6 +24,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "concurrently": "^9.1.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "wrangler": "^4.84.0"
   }
 }
