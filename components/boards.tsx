@@ -16,21 +16,21 @@ export function HoloBoardGo({
   const step = (size - pad * 2) / (N - 1);
 
   return (
-    <div style={{ perspective: "1400px", perspectiveOrigin: "50% 20%", width: size, height: size * 0.8, position: "relative" }}>
+    <div className="holo-board" style={{ perspective: "1400px", perspectiveOrigin: "50% 20%", width: `min(100%, ${size}px)`, aspectRatio: "1 / 0.8", position: "relative" }}>
       <div style={{
         position: "absolute", left: "50%", bottom: "-10%",
-        width: size * 0.9, height: 40, transform: "translateX(-50%)",
+        width: "90%", height: "10%", transform: "translateX(-50%)",
         background: "radial-gradient(ellipse, var(--phos-cyan-glow), transparent 70%)",
         filter: "blur(16px)", opacity: 0.8,
       }} />
       <div style={{
-        width: size, height: size, transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%",
+        width: "100%", aspectRatio: "1", transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%",
         position: "relative",
         background: "linear-gradient(180deg, rgba(95,240,230,0.03) 0%, rgba(95,240,230,0.08) 100%)",
         border: "1px solid rgba(95,240,230,0.25)",
         boxShadow: "inset 0 0 60px rgba(95,240,230,0.08), 0 0 40px rgba(95,240,230,0.2)",
       }}>
-        <svg width={size} height={size} style={{ position: "absolute", inset: 0 }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet" style={{ position: "absolute", inset: 0 }}>
           <defs>
             <radialGradient id="stoneB" cx="35%" cy="35%">
               <stop offset="0%" stopColor="#4a5670" />
@@ -100,10 +100,10 @@ export function HoloBoardChess({ size = 220, tilt = 36, fen }: { size?: number; 
   const step = (size - pad * 2) / 8;
 
   return (
-    <div style={{ perspective: "1000px", width: size, height: size * 0.78, position: "relative" }}>
-      <div style={{ position: "absolute", left: "50%", bottom: "-8%", width: size * 0.85, height: 20, transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(255,181,71,0.35), transparent 70%)", filter: "blur(10px)" }} />
-      <div style={{ width: size, height: size, transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%", position: "relative" }}>
-        <svg width={size} height={size}>
+    <div className="holo-board" style={{ perspective: "1000px", width: `min(100%, ${size}px)`, aspectRatio: "1 / 0.78", position: "relative" }}>
+      <div style={{ position: "absolute", left: "50%", bottom: "-8%", width: "85%", height: "9%", transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(255,181,71,0.35), transparent 70%)", filter: "blur(10px)" }} />
+      <div style={{ width: "100%", aspectRatio: "1", transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%", position: "relative" }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet">
           {Array.from({ length: 8 }).map((_, y) =>
             Array.from({ length: 8 }).map((_, x) => {
               const dark = (x + y) % 2 === 1;
@@ -143,10 +143,10 @@ export function HoloBoardCheckers({ size = 220, tilt = 36 }: { size?: number; ti
   const pad = 10;
   const step = (size - pad * 2) / 8;
   return (
-    <div style={{ perspective: "1000px", width: size, height: size * 0.78, position: "relative" }}>
-      <div style={{ position: "absolute", left: "50%", bottom: "-8%", width: size * 0.85, height: 20, transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(125,255,156,0.35), transparent 70%)", filter: "blur(10px)" }} />
-      <div style={{ width: size, height: size, transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%" }}>
-        <svg width={size} height={size}>
+    <div className="holo-board" style={{ perspective: "1000px", width: `min(100%, ${size}px)`, aspectRatio: "1 / 0.78", position: "relative" }}>
+      <div style={{ position: "absolute", left: "50%", bottom: "-8%", width: "85%", height: "9%", transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(125,255,156,0.35), transparent 70%)", filter: "blur(10px)" }} />
+      <div style={{ width: "100%", aspectRatio: "1", transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%" }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet">
           {Array.from({ length: 8 }).map((_, y) =>
             Array.from({ length: 8 }).map((_, x) => {
               const dark = (x + y) % 2 === 1;

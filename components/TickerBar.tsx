@@ -29,7 +29,7 @@ export function TickerBar() {
       <div style={{
         position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "6px 16px",
+        padding: "6px var(--page-pad-x)",
         background: "rgba(10,12,16,0.72)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
@@ -64,16 +64,16 @@ export function TickerBar() {
       WebkitBackdropFilter: "blur(8px)",
       whiteSpace: "nowrap",
     }}>
-      <div style={{ display: "inline-block", animation: "ticker 60s linear infinite", padding: "8px 0", paddingRight: 160 }}>
+      <div style={{ display: "inline-block", animation: "ticker 60s linear infinite", padding: "8px 0", paddingRight: 120 }}>
         {joined.map((t, i) => (
-          <span key={i} style={{ padding: "0 30px", fontSize: 11, color: "var(--ink-200)", fontFamily: "var(--font-mono)" }}>
+          <span key={i} style={{ padding: "0 clamp(14px, 5vw, 30px)", fontSize: 11, color: "var(--ink-200)", fontFamily: "var(--font-mono)" }}>
             <span style={{ color: "var(--phos-cyan)", marginRight: 8 }}>◆</span>{t}
           </span>
         ))}
       </div>
       <div style={{
         position: "absolute", top: 0, right: 0, bottom: 0,
-        display: "flex", alignItems: "center", paddingRight: 12, paddingLeft: 40,
+        display: "flex", alignItems: "center", paddingRight: "var(--page-pad-x)", paddingLeft: 28,
         background: "linear-gradient(90deg, rgba(10,12,16,0) 0%, rgba(10,12,16,0.9) 40%, rgba(10,12,16,0.95) 100%)",
       }}>
         <button onClick={() => toggle(true)} style={{

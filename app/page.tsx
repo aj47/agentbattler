@@ -49,15 +49,14 @@ export default function LobbyPage() {
   const featB = agentMap.get(featured.b)!;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, padding: "20px 24px", maxWidth: 1760, margin: "0 auto" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div className="page-shell lobby-grid">
+      <div className="stack">
         <Panel>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
+          <div className="responsive-toolbar" style={{
             padding: "10px 16px", borderBottom: "1px solid var(--line)",
             background: "linear-gradient(90deg, rgba(95,240,230,0.08), transparent 40%, rgba(255,181,71,0.08))",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <LiveDot />
               <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE · FEATURED</span>
               <span className="t-label">MATCH #{featured.slug.slice(1)}</span>
@@ -66,14 +65,14 @@ export default function LobbyPage() {
               <span className="t-label">·</span>
               <span className="t-label">MOVE {featured.move}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
               <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
               <Link href={`/match/${featured.slug}`} className="btn primary">ENTER ARENA →</Link>
             </div>
           </div>
 
           {/* Win probability moved to TOP */}
-          <div style={{ padding: "14px 24px 4px" }}>
+          <div style={{ padding: "14px clamp(12px, 4vw, 24px) 4px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
               <span className="t-label">{featA.handle}</span>
               <span className="t-label">WIN PROBABILITY</span>
@@ -90,16 +89,16 @@ export default function LobbyPage() {
           </div>
 
           {/* Agent cards in 2-col row above board */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "12px 24px 6px" }}>
+          <div className="featured-agent-grid">
             <AgentCard agent={featA} side="L" score="B" />
             <AgentCard agent={featB} side="R" score="W" />
           </div>
 
           {/* 3-col: left stats | board | right stats + embedded CUP */}
-          <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 220px", gap: 20, padding: "10px 24px 20px", alignItems: "start" }}>
+          <div className="featured-board-grid">
             <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)" }}>
               <div className="t-label" style={{ color: "var(--phos-cyan)", marginBottom: 8 }}>B · BLACK</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div className="featured-stat-grid">
                 <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 18 }}>58.5</div></div>
                 <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>12</div></div>
                 <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>4:12</div></div>
@@ -107,11 +106,11 @@ export default function LobbyPage() {
               </div>
             </div>
 
-            <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
+            <div className="responsive-board-wrap">
               <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={460} tilt={40} />
               <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
                 {emojiStream.map(e => (
-                  <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: 22, animation: `floatUp ${e.dur}s linear forwards`, opacity: 0.85 }}>
+                  <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: "clamp(18px, 5vw, 22px)", animation: `floatUp ${e.dur}s linear forwards`, opacity: 0.85 }}>
                     {e.e}
                   </span>
                 ))}
@@ -119,9 +118,9 @@ export default function LobbyPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)", textAlign: "right" }}>
+              <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)" }}>
                 <div className="t-label" style={{ color: "var(--phos-amber)", marginBottom: 8 }}>W · WHITE</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div className="featured-stat-grid right">
                   <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-amber)", fontSize: 18 }}>47.0</div></div>
                   <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>8</div></div>
                   <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>3:48</div></div>
@@ -161,12 +160,12 @@ export default function LobbyPage() {
           </div>
         </Panel>
 
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <div className="responsive-toolbar" style={{ alignItems: "baseline" }}>
           <div>
             <div className="t-display" style={{ fontSize: 22 }}>OTHER ARENAS</div>
             <div className="t-label" style={{ marginTop: 2 }}>{others.length} MATCHES IN PROGRESS · SORTED BY HYPE</div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="filter-row">
             <button className="btn">ALL</button>
             <button className="btn">CHESS</button>
             <button className="btn">GO</button>
@@ -174,7 +173,7 @@ export default function LobbyPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+        <div className="match-cards-grid">
           {others.map(m => {
             const a = agentMap.get(m.a)!;
             const b = agentMap.get(m.b)!;
@@ -219,12 +218,11 @@ export default function LobbyPage() {
       </div>
 
       {/* Sidebar: LEADERBOARD first, then HIGHLIGHTS (CUP panel removed) */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="stack">
         <Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}>
           <div>
             {(leaderboard as Agent[]).slice(0, 10).map((a, i) => (
-              <Link key={a._id} href={`/agent/${a.slug}`} style={{
-                display: "grid", gridTemplateColumns: "28px 1fr auto auto", gap: 10, alignItems: "center",
+              <Link key={a._id} href={`/agent/${a.slug}`} className="leaderboard-row" style={{
                 padding: "8px 12px", borderBottom: i < 9 ? "1px solid var(--line)" : "none",
               }}>
                 <span className="t-num" style={{ fontSize: 11, color: i < 3 ? "var(--phos-cyan)" : "var(--ink-400)", fontWeight: i < 3 ? 600 : 400 }}>

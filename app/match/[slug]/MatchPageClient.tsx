@@ -69,12 +69,8 @@ export default function MatchPageClient({ slug }: { slug: string }) {
   ];
 
   return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "280px 1fr 320px", gap: 16,
-      padding: "16px 20px", maxWidth: 1760, margin: "0 auto",
-      height: "calc(100vh - 60px - 40px)", minHeight: 760,
-    }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
+    <div className="page-shell match-page-shell match-page-grid">
+      <div className="stack match-left-col">
         <Panel>
           <div style={{ padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -105,7 +101,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
           </pre>
         </Panel>
 
-        <Panel label="◀ COMMENTARY" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <Panel label="◀ COMMENTARY" className="match-info-panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <div style={{ overflow: "auto", padding: "8px 0" }}>
             {commentary.map((c, i) => (
               <div key={i} style={{ padding: "8px 14px", borderBottom: "1px solid var(--line)", background: c.hot ? "rgba(255,95,180,0.05)" : "transparent" }}>
@@ -120,17 +116,17 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         </Panel>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
-        <Panel style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderBottom: "1px solid var(--line)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="stack match-arena-col">
+        <Panel className="match-arena-panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div className="responsive-toolbar" style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <LiveDot />
               <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE</span>
               <span className="t-label">ARENA 01 · HOLO</span>
               <span className="t-label">·</span>
               <span className="t-label" style={{ color: "var(--phos-cyan)" }}>GO 19×19</span>
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div className="camera-row">
               <button className="btn">◉ CAM 1</button>
               <button className="btn" style={{ borderColor: "var(--phos-cyan)", color: "var(--phos-cyan)" }}>◉ CAM 2</button>
               <button className="btn">◉ TOP</button>
@@ -138,8 +134,8 @@ export default function MatchPageClient({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <div style={{ flex: 1, position: "relative", display: "grid", placeItems: "center", background: "radial-gradient(ellipse at 50% 60%, rgba(95,240,230,0.08), transparent 70%)", overflow: "hidden" }}>
-            <div style={{ position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", width: 700, height: 180, pointerEvents: "none" }}>
+          <div className="arena-stage" style={{ flex: 1, position: "relative", display: "grid", placeItems: "center", background: "radial-gradient(ellipse at 50% 60%, rgba(95,240,230,0.08), transparent 70%)", overflow: "hidden" }}>
+            <div style={{ position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", width: "min(700px, 120vw)", height: 180, pointerEvents: "none" }}>
               {[0, 1, 2, 3].map(i => (
                 <div key={i} style={{
                   position: "absolute", left: "50%", top: "50%",
@@ -154,40 +150,42 @@ export default function MatchPageClient({ slug }: { slug: string }) {
 
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
               {emojiStream.map(e => (
-                <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: 26, animation: `floatUp ${e.dur}s linear forwards`, filter: "drop-shadow(0 0 4px rgba(0,0,0,0.8))" }}>
+                <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: "clamp(18px, 5vw, 26px)", animation: `floatUp ${e.dur}s linear forwards`, filter: "drop-shadow(0 0 4px rgba(0,0,0,0.8))" }}>
                   {e.e}
                 </span>
               ))}
             </div>
 
-            <div style={{ position: "absolute", top: 16, left: 20, padding: "6px 10px", background: "rgba(5,7,13,0.75)", border: "1px solid var(--line-bright)", fontFamily: "var(--font-mono)", fontSize: 11 }}>
-              <span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>MOVE </span>
-              <span className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>{moveIdx}</span>
-            </div>
+            <div className="arena-overlay-row">
+              <div className="arena-overlay-pill">
+                <span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>MOVE </span>
+                <span className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>{moveIdx}</span>
+              </div>
 
-            <div style={{ position: "absolute", top: 16, right: 20, padding: "6px 10px", background: "rgba(5,7,13,0.75)", border: "1px solid var(--line-bright)", display: "flex", gap: 10, alignItems: "center" }}>
-              <span className="t-label" style={{ fontSize: 9 }}>SPECTATORS</span>
-              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 12 }}>{m.viewers.toLocaleString()}</span>
+              <div className="arena-overlay-pill" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span className="t-label" style={{ fontSize: 9 }}>SPECTATORS</span>
+                <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 12 }}>{m.viewers.toLocaleString()}</span>
+              </div>
             </div>
           </div>
 
           <div style={{ padding: "12px 16px", borderTop: "1px solid var(--line)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <div className="win-prob-row">
               <span className="t-label" style={{ color: "var(--phos-cyan)" }}>B · {a.handle} · 58%</span>
-              <span className="t-label">WIN PROBABILITY</span>
-              <span className="t-label" style={{ color: "var(--phos-amber)" }}>42% · {b.handle} · W</span>
+              <span className="t-label center">WIN PROBABILITY</span>
+              <span className="t-label right" style={{ color: "var(--phos-amber)" }}>42% · {b.handle} · W</span>
             </div>
             <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
               <div style={{ width: "58%", background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)" }} />
               <div style={{ width: "42%", background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)" }} />
             </div>
 
-            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="match-control-row" style={{ marginTop: 12 }}>
               <button className="btn" onClick={() => setPlaying(p => !p)}
                 style={{ borderColor: playing ? "var(--phos-green)" : "var(--line-2)", color: playing ? "var(--phos-green)" : "var(--ink-200)" }}>
                 {playing ? "❚❚ PAUSE" : "▶ PLAY"}
               </button>
-              <div style={{ flex: 1, height: 3, background: "var(--bg-void)", position: "relative" }}>
+              <div className="timeline" style={{ height: 3, background: "var(--bg-void)", position: "relative" }}>
                 <div style={{ height: "100%", width: `${(moveIdx / 180) * 100}%`, background: "var(--phos-cyan)" }} />
                 {[34, 67, 122, 127].map(t => (
                   <div key={t} style={{ position: "absolute", top: -3, left: `${(t / 180) * 100}%`, width: 2, height: 9, background: "var(--phos-magenta)", boxShadow: "var(--glow-magenta)" }} />
@@ -199,7 +197,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         </Panel>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
+      <div className="stack match-right-col">
         <Panel>
           <div style={{ padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -225,7 +223,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         </Panel>
 
         <Panel label="◐ SPECTATOR CHAT" right={<span className="t-label" style={{ fontSize: 9 }}>8,934 ONLINE</span>}
-          style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          className="match-chat-panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <LiveChat messages={(chat as ChatMessage[]) || []} emojis={emojis || []} />
         </Panel>
       </div>
