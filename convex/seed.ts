@@ -151,7 +151,7 @@ export const run = internalMutation({
   args: {},
   handler: async (ctx) => {
     // clear
-    for (const t of ["agents","games","matches","highlights","chatMessages","tickerItems","bracketMatches","profileMatches","featured"] as const) {
+    for (const t of ["agents","games","matches","highlights","chatMessages","tickerItems","bracketMatches","profileMatches","featured","submissions"] as const) {
       const rows = await ctx.db.query(t).collect();
       for (const r of rows) await ctx.db.delete(r._id);
     }

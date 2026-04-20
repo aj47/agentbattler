@@ -1,22 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
-import { HoloBoardGo, MiniBoard } from "../components/boards";
-import type { Agent, Match, Highlight, Stone } from "../lib/types";
+import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers, MiniBoard } from "../components/boards";
+import { boardToStones } from "../lib/games/index";
+import type { Agent, Match, Highlight } from "../lib/types";
+import type { GoBoard } from "../lib/games/go";
+import type { ChessBoard } from "../lib/games/chess";
+import type { CheckersDisc } from "../lib/games/checkers";
 
 export default function LobbyPage() {
-  const agents = useQuery(api.queries.allAgents);
-  const matches = useQuery(api.queries.allMatches);
+  const agents    = useQuery(api.queries.allAgents);
+  const matches   = useQuery(api.queries.allMatches);
   const highlights = useQuery(api.queries.allHighlights);
   const leaderboard = useQuery(api.queries.leaderboard);
-  const stones = useQuery(api.queries.featuredData, { key: "go_stones" }) as Stone[] | null | undefined;
-  const lastMove = useQuery(api.queries.featuredData, { key: "go_last_move" });
-  const hot = useQuery(api.queries.featuredData, { key: "go_hot" });
-  const crowdEmoji = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
+  const initMatch = useMutation(api.mutations.initMatchState);
 
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
@@ -24,36 +25,92 @@ export default function LobbyPage() {
     return m;
   }, [agents]);
 
-  const [emojiStream, setEmojiStream] = useState<{ e: string; id: number; x: number; dur: number }[]>([]);
+  const featured: Match | null = useMemo(() => {
+    if (!matches) return null;
+    const ms = matches as Match[];
+    return (
+      ms.find(m => m.status === "featured") ??
+      ms.filter(m => m.status === "live" || m.status === "starting")
+        .sort((a, b) => b.viewers - a.viewers)[0] ??
+      ms[0] ?? null
+    );
+  }, [matches]);
+
+  const featuredState = useQuery(
+    api.queries.matchState,
+    featured ? { slug: featured.slug } : "skip",
+  );
 
   useEffect(() => {
-    if (!crowdEmoji || crowdEmoji.length === 0) return;
-    const id = setInterval(() => {
-      setEmojiStream(prev => {
-        const e = crowdEmoji[Math.floor(Math.random() * crowdEmoji.length)];
-        return [...prev, { e, id: Math.random(), x: 20 + Math.random() * 60, dur: 2.5 + Math.random() * 1.5 }].slice(-12);
-      });
-    }, 450);
-    return () => clearInterval(id);
-  }, [crowdEmoji]);
+    if (featured && featuredState === null) {
+      const game = featured.game as "chess" | "go19" | "checkers";
+      initMatch({ slug: featured.slug, game }).catch(() => {});
+    }
+  }, [featured, featuredState, initMatch]);
+
+  const others = useMemo(() => {
+    if (!matches || !featured) return (matches as Match[] | undefined) ?? [];
+    return (matches as Match[]).filter(m => m._id !== featured._id);
+  }, [matches, featured]);
+
+  // Measure the board container so we can size the board to fill it exactly
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+  const [boardSize, setBoardSize] = useState(480);
+  useEffect(() => {
+    const el = boardContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      // Go board height = size * 0.8; chess/checkers height = size * 0.78
+      // Fit the larger dimension while leaving a small breathing room
+      const byWidth  = Math.floor(width  * 0.96);
+      const byHeight = Math.floor(height / 0.82);
+      setBoardSize(Math.min(byWidth, byHeight, 640));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   if (!agents || !matches || !highlights || !leaderboard) {
-    return <div style={{ padding: 40, color: "var(--ink-300)" }}>LOADING…</div>;
+    return <div className="page-shell" style={{ color: "var(--ink-300)" }}>LOADING…</div>;
   }
-
-  const featured = (matches as Match[]).find(m => m.status === "featured");
-  const others = (matches as Match[]).filter(m => m.status !== "featured");
-  if (!featured) return <div style={{ padding: 40 }}>No featured match yet. Seed the DB.</div>;
+  if (!featured) {
+    return <div className="page-shell" style={{ color: "var(--ink-300)" }}>No matches seeded yet.</div>;
+  }
 
   const featA = agentMap.get(featured.a)!;
   const featB = agentMap.get(featured.b)!;
+  const game = featured.game;
+  const winProbB = featuredState ? Math.round(featuredState.winProbB * 100) : 58;
+  const winProbW = 100 - winProbB;
+  const moveCount = featuredState?.moveCount ?? featured.move;
+  const gameLabel = game === "go19" ? "GO 19×19" : game === "chess" ? "CHESS" : "CHECKERS";
+
+  let boardEl: React.ReactNode;
+  if (game === "go19") {
+    const goBoard = featuredState?.board as GoBoard | undefined;
+    const stones = goBoard ? boardToStones(goBoard) : [];
+    const lm = featuredState?.lastMove as { x: number; y: number; c: "b" | "w" } | null | undefined;
+    boardEl = <HoloBoardGo stones={stones} lastMove={lm ?? null} hot={[]} size={boardSize} tilt={40} />;
+  } else if (game === "chess") {
+    const chessBoard = featuredState?.board as ChessBoard | undefined;
+    boardEl = <HoloBoardChess board={chessBoard} size={boardSize} tilt={36} />;
+  } else {
+    const checkersDiscs = featuredState?.board as CheckersDisc[] | undefined;
+    boardEl = <HoloBoardCheckers discs={checkersDiscs} size={boardSize} tilt={36} />;
+  }
 
   return (
-    <div className="page-shell lobby-grid">
-      <div className="stack">
-        <Panel>
+    <div>
+      {/* ── ABOVE THE FOLD: featured match fills the viewport ── */}
+      <div className="page-shell lobby-hero">
+
+        {/* Left: featured match panel */}
+        <Panel className="lobby-feature-panel" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+          {/* Header */}
           <div className="responsive-toolbar" style={{
-            padding: "10px 16px", borderBottom: "1px solid var(--line)",
+            padding: "10px 16px", borderBottom: "1px solid var(--line)", flexShrink: 0,
             background: "linear-gradient(90deg, rgba(95,240,230,0.08), transparent 40%, rgba(255,181,71,0.08))",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -61,9 +118,9 @@ export default function LobbyPage() {
               <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE · FEATURED</span>
               <span className="t-label">MATCH #{featured.slug.slice(1)}</span>
               <span className="t-label">·</span>
-              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>GO 19×19</span>
+              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
               <span className="t-label">·</span>
-              <span className="t-label">MOVE {featured.move}</span>
+              <span className="t-label">MOVE {moveCount}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
               <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
@@ -71,96 +128,103 @@ export default function LobbyPage() {
             </div>
           </div>
 
-          {/* Win probability moved to TOP */}
-          <div style={{ padding: "14px clamp(12px, 4vw, 24px) 4px" }}>
+          {/* Win probability */}
+          <div style={{ padding: "10px clamp(12px, 4vw, 20px) 6px", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span className="t-label">{featA.handle}</span>
+              <span className="t-label">{featA?.handle}</span>
               <span className="t-label">WIN PROBABILITY</span>
-              <span className="t-label">{featB.handle}</span>
+              <span className="t-label">{featB?.handle}</span>
             </div>
             <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-              <div style={{ width: "58%", background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)" }} />
-              <div style={{ width: "42%", background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)" }} />
+              <div style={{ width: `${winProbB}%`, background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)", transition: "width 0.8s ease" }} />
+              <div style={{ width: `${winProbW}%`, background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)", transition: "width 0.8s ease" }} />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>58%</span>
-              <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>42%</span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>{winProbB}%</span>
+              <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>{winProbW}%</span>
             </div>
           </div>
 
-          {/* Agent cards in 2-col row above board */}
-          <div className="featured-agent-grid">
-            <AgentCard agent={featA} side="L" score="B" />
-            <AgentCard agent={featB} side="R" score="W" />
+          {/* Agent cards */}
+          <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
+            {featA && <AgentCard agent={featA} side="L" score="B" />}
+            {featB && <AgentCard agent={featB} side="R" score="W" />}
           </div>
 
-          {/* 3-col: left stats | board | right stats + embedded CUP */}
-          <div className="featured-board-grid">
-            <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)" }}>
-              <div className="t-label" style={{ color: "var(--phos-cyan)", marginBottom: 8 }}>B · BLACK</div>
-              <div className="featured-stat-grid">
-                <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 18 }}>58.5</div></div>
-                <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>12</div></div>
-                <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>4:12</div></div>
-                <div>INFLUENCE <div className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 14 }}>+14.2</div></div>
-              </div>
+          {/* Stats strip */}
+          <div className="lobby-stats-strip" style={{
+            padding: "6px clamp(12px, 4vw, 20px)", flexShrink: 0,
+            borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)",
+            background: "rgba(5,7,13,0.4)",
+          }}>
+            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", flexWrap: "wrap" }}>
+              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>B · BLACK</span>
+              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{featuredState ? (game === "go19" ? (winProbB * 1.8).toFixed(1) : featuredState.capturesB) : "—"}</span></span>
+              <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesB ?? 0}</span></span>
             </div>
-
-            <div className="responsive-board-wrap">
-              <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={460} tilt={40} />
-              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-                {emojiStream.map(e => (
-                  <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: "clamp(18px, 5vw, 22px)", animation: `floatUp ${e.dur}s linear forwards`, opacity: 0.85 }}>
-                    {e.e}
-                  </span>
-                ))}
-              </div>
+            <span className="t-label" style={{ color: "var(--ink-400)" }}>{(featuredState?.phase ?? featured.phase).toUpperCase()} · MV {moveCount}</span>
+            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesW ?? 0}</span></span>
+              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-amber)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
+              <span className="t-label" style={{ color: "var(--phos-amber)" }}>W · WHITE</span>
             </div>
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)" }}>
-                <div className="t-label" style={{ color: "var(--phos-amber)", marginBottom: 8 }}>W · WHITE</div>
-                <div className="featured-stat-grid right">
-                  <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-amber)", fontSize: 18 }}>47.0</div></div>
-                  <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>8</div></div>
-                  <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>3:48</div></div>
-                  <div>INFLUENCE <div className="t-num" style={{ color: "var(--phos-amber)", fontSize: 14 }}>-14.2</div></div>
-                </div>
-              </div>
-
-              {/* Embedded CUP popover */}
-              <div style={{
-                border: "1px solid var(--phos-magenta)",
-                boxShadow: "0 0 18px rgba(255,99,199,0.18)",
-                background: "rgba(20,10,20,0.35)",
-                padding: 12,
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span className="t-label" style={{ color: "var(--phos-magenta)" }}>◈ CUP S3</span>
-                  <Pill color="magenta">LIVE</Pill>
-                </div>
-                <div className="t-display" style={{ fontSize: 22, color: "var(--phos-cyan)", textShadow: "var(--glow-cyan)" }}>$48,000</div>
-                <div className="t-label" style={{ fontSize: 9, marginTop: 1 }}>PRIZE POOL</div>
-                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4, fontSize: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span className="t-mono">QUARTERS</span><span style={{ color: "var(--phos-green)" }}>DONE</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span className="t-mono">SEMIS</span><span style={{ color: "var(--phos-amber)" }}>LIVE</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span className="t-mono">FINAL</span><span className="t-num" style={{ color: "var(--ink-300)" }}>2:14:08</span>
-                  </div>
-                </div>
-                <Link href="/bracket" className="btn" style={{ width: "100%", marginTop: 10, justifyContent: "center", fontSize: 10 }}>
-                  VIEW BRACKET →
-                </Link>
-              </div>
-            </div>
+          {/* Board — fills all remaining space */}
+          <div
+            ref={boardContainerRef}
+            className="lobby-board-stage"
+            style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 12, overflow: "hidden" }}
+          >
+            {boardEl}
           </div>
         </Panel>
 
-        <div className="responsive-toolbar" style={{ alignItems: "baseline" }}>
+        {/* Right sidebar */}
+        <div className="stack lobby-sidebar">
+          <Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}
+            style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {(leaderboard as Agent[]).slice(0, 10).map((a, i) => (
+                <Link key={a._id} href={`/agent/${a.slug}`} className="leaderboard-row" style={{
+                  padding: "7px 12px", borderBottom: i < 9 ? "1px solid var(--line)" : "none",
+                }}>
+                  <span className="t-num" style={{ fontSize: 10, color: i < 3 ? "var(--phos-cyan)" : "var(--ink-400)", fontWeight: i < 3 ? 600 : 400 }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                    <AgentGlyph agent={a} size={18} spin={false} />
+                    <span className="t-mono" style={{ fontSize: 10, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.handle}</span>
+                  </div>
+                  <span className="t-num" style={{ fontSize: 10, color: `var(--phos-${a.color})` }}>{a.elo}</span>
+                  <span className="t-num" style={{ fontSize: 9, color: a.streak > 0 ? "var(--phos-green)" : a.streak < 0 ? "var(--phos-red)" : "var(--ink-400)" }}>
+                    {a.streak > 0 ? `W${a.streak}` : a.streak < 0 ? `L${Math.abs(a.streak)}` : "—"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel label="◆ UPSETS & HIGHLIGHTS" style={{ flexShrink: 0 }}>
+            <div>
+              {(highlights as Highlight[]).map((h, i) => (
+                <div key={i} style={{ padding: "10px 12px", borderBottom: i < highlights.length - 1 ? "1px solid var(--line)" : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                    <Pill color={h.color}>{h.tag}</Pill>
+                    <span className="t-label" style={{ fontSize: 9 }}>{h.when}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--ink-100)", lineHeight: 1.3 }}>{h.title}</div>
+                  <div className="t-num" style={{ fontSize: 10, color: `var(--phos-${h.color})`, marginTop: 2 }}>{h.delta}</div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+      </div>
+
+      {/* ── BELOW THE FOLD: other arenas ── */}
+      <div className="page-shell" style={{ paddingTop: 0 }}>
+        <div className="responsive-toolbar" style={{ alignItems: "baseline", marginBottom: 16 }}>
           <div>
             <div className="t-display" style={{ fontSize: 22 }}>OTHER ARENAS</div>
             <div className="t-label" style={{ marginTop: 2 }}>{others.length} MATCHES IN PROGRESS · SORTED BY HYPE</div>
@@ -188,24 +252,24 @@ export default function LobbyPage() {
                   </div>
                   <span className="t-label">👁 {m.viewers.toLocaleString()}</span>
                 </div>
-                <div style={{ padding: "14px 14px 4px", display: "flex", justifyContent: "center" }}>
-                  <MiniBoard game={m.game} size={200} stones={stones || []} />
+                <div style={{ padding: "12px 14px 4px", display: "flex", justifyContent: "center" }}>
+                  <MiniBoard game={m.game} size={200} />
                 </div>
                 <div style={{ padding: "4px 12px 12px" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: 1 }}>
                       <AgentGlyph agent={a} size={22} spin={false} />
-                      <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis" }}>{a.handle}</span>
+                      <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis" }}>{a?.handle}</span>
                     </div>
                     <span className="t-label" style={{ fontSize: 9, color: "var(--ink-400)" }}>vs</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: 1, justifyContent: "flex-end" }}>
-                      <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis" }}>{b.handle}</span>
+                      <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis" }}>{b?.handle}</span>
                       <AgentGlyph agent={b} size={22} spin={false} />
                     </div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 10, color: "var(--ink-300)" }}>
                     <span className="t-label">MV {m.move}</span>
-                    <span className="t-label" style={{ color: "var(--ink-300)" }}>{m.phase.toUpperCase()}</span>
+                    <span className="t-label">{m.phase.toUpperCase()}</span>
                     <Link href={`/match/${m.slug}`} style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", color: "var(--phos-cyan)" }}>
                       WATCH →
                     </Link>
@@ -215,46 +279,6 @@ export default function LobbyPage() {
             );
           })}
         </div>
-      </div>
-
-      {/* Sidebar: LEADERBOARD first, then HIGHLIGHTS (CUP panel removed) */}
-      <div className="stack">
-        <Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}>
-          <div>
-            {(leaderboard as Agent[]).slice(0, 10).map((a, i) => (
-              <Link key={a._id} href={`/agent/${a.slug}`} className="leaderboard-row" style={{
-                padding: "8px 12px", borderBottom: i < 9 ? "1px solid var(--line)" : "none",
-              }}>
-                <span className="t-num" style={{ fontSize: 11, color: i < 3 ? "var(--phos-cyan)" : "var(--ink-400)", fontWeight: i < 3 ? 600 : 400 }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <AgentGlyph agent={a} size={20} spin={false} />
-                  <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis" }}>{a.handle}</span>
-                </div>
-                <span className="t-num" style={{ fontSize: 11, color: `var(--phos-${a.color})` }}>{a.elo}</span>
-                <span className="t-num" style={{ fontSize: 9, color: a.streak > 0 ? "var(--phos-green)" : a.streak < 0 ? "var(--phos-red)" : "var(--ink-400)" }}>
-                  {a.streak > 0 ? `W${a.streak}` : a.streak < 0 ? `L${Math.abs(a.streak)}` : "—"}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel label="◆ UPSETS & HIGHLIGHTS">
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {(highlights as Highlight[]).map((h, i) => (
-              <div key={i} style={{ padding: "12px 14px", borderBottom: i < highlights.length - 1 ? "1px solid var(--line)" : "none", cursor: "pointer" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <Pill color={h.color}>{h.tag}</Pill>
-                  <span className="t-label" style={{ fontSize: 9 }}>{h.when}</span>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--ink-100)", lineHeight: 1.3 }}>{h.title}</div>
-                <div className="t-num" style={{ fontSize: 10, color: `var(--phos-${h.color})`, marginTop: 3 }}>{h.delta}</div>
-              </div>
-            ))}
-          </div>
-        </Panel>
       </div>
     </div>
   );

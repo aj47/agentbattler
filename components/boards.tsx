@@ -72,7 +72,7 @@ export function HoloBoardGo({
               </g>
             );
           })}
-          {lastMove && (
+          {lastMove && lastMove.x != null && lastMove.y != null && (
             <circle cx={pad + lastMove.x * step} cy={pad + lastMove.y * step} r={step * 0.2} fill="none" stroke="var(--phos-magenta)" strokeWidth="1.5" style={{ animation: "pulseHot 1.4s ease-out infinite" }} />
           )}
         </svg>
@@ -81,8 +81,27 @@ export function HoloBoardGo({
   );
 }
 
-export function HoloBoardChess({ size = 220, tilt = 36, fen }: { size?: number; tilt?: number; fen?: string }) {
-  const f = fen || "r3kb1r/ppp2ppp/2n1bn2/3pp3/3PP3/2N1BN2/PPP2PPP/R3KB1R";
+export function HoloBoardChess({
+  size = 220, tilt = 36, fen, board,
+}: {
+  size?: number;
+  tilt?: number;
+  fen?: string;
+  board?: string[][];
+}) {
+  // board prop takes priority; fall back to fen or demo
+  let f = fen || "r3kb1r/ppp2ppp/2n1bn2/3pp3/3PP3/2N1BN2/PPP2PPP/R3KB1R";
+  if (board) {
+    f = board.map(row => {
+      let s = ""; let empty = 0;
+      for (const cell of row) {
+        if (!cell) { empty++; }
+        else { if (empty) { s += empty; empty = 0; } s += cell; }
+      }
+      if (empty) s += empty;
+      return s;
+    }).join("/");
+  }
   const pieces: Record<string, string> = {
     K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
     k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟",
@@ -131,8 +150,14 @@ export function HoloBoardChess({ size = 220, tilt = 36, fen }: { size?: number; 
   );
 }
 
-export function HoloBoardCheckers({ size = 220, tilt = 36 }: { size?: number; tilt?: number }) {
-  const discs = [
+export function HoloBoardCheckers({
+  size = 220, tilt = 36, discs: liveDiscs,
+}: {
+  size?: number;
+  tilt?: number;
+  discs?: { x: number; y: number; c: "r" | "b"; k: boolean }[];
+}) {
+  const discs = liveDiscs ?? [
     { x: 0, y: 5, c: "r" }, { x: 2, y: 5, c: "r" }, { x: 4, y: 5, c: "r" },
     { x: 1, y: 6, c: "r" }, { x: 3, y: 6, c: "r" }, { x: 5, y: 6, c: "r", k: true },
     { x: 0, y: 7, c: "r" }, { x: 6, y: 7, c: "r" },

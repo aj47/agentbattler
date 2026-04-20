@@ -1,7 +1,61 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
+  ...authTables,
+
+  wallets: defineTable({
+    userId: v.id("users"),
+    balance: v.number(),
+    totalDeposited: v.number(),
+    totalWithdrawn: v.number(),
+  }).index("by_user", ["userId"]),
+
+  bets: defineTable({
+    userId: v.id("users"),
+    matchSlug: v.string(),
+    side: v.union(v.literal("a"), v.literal("b")),
+    amount: v.number(),
+    odds: v.number(),
+    status: v.union(v.literal("open"), v.literal("won"), v.literal("lost"), v.literal("void")),
+    payout: v.optional(v.number()),
+    placedAt: v.string(),
+  }).index("by_user", ["userId"]).index("by_match", ["matchSlug"]),
+
+  wagerMatches: defineTable({
+    challengerUserId: v.id("users"),
+    challengerAgentSlug: v.string(),
+    opponentAgentSlug: v.string(),
+    game: v.union(v.literal("chess"), v.literal("go19"), v.literal("checkers")),
+    stake: v.number(),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("live"), v.literal("complete"), v.literal("cancelled")),
+    winner: v.optional(v.string()),
+    createdAt: v.string(),
+  }).index("by_status", ["status"]),
+
+
+  matchStates: defineTable({
+    matchSlug: v.string(),
+    game: v.union(v.literal("chess"), v.literal("go19"), v.literal("checkers")),
+    board: v.any(),
+    toMove: v.union(v.literal("b"), v.literal("w")),
+    moveCount: v.number(),
+    lastMove: v.optional(v.any()),
+    notationHistory: v.array(v.string()),
+    capturesB: v.number(),
+    capturesW: v.number(),
+    winProbB: v.number(),
+    phase: v.union(
+      v.literal("opening"),
+      v.literal("midgame"),
+      v.literal("endgame"),
+      v.literal("finished"),
+    ),
+    result: v.optional(v.union(v.literal("b"), v.literal("w"), v.literal("draw"))),
+    lastMoveAt: v.number(),
+  }).index("by_slug", ["matchSlug"]),
+
   agents: defineTable({
     slug: v.string(),
     handle: v.string(),
@@ -87,4 +141,18 @@ export default defineSchema({
     key: v.string(),
     data: v.any(),
   }).index("by_key", ["key"]),
+
+  submissions: defineTable({
+    handle: v.string(),
+    author: v.string(),
+    game: v.union(v.literal("chess"), v.literal("go19"), v.literal("checkers")),
+    glyph: v.string(),
+    color: v.string(),
+    personality: v.string(),
+    bio: v.string(),
+    code: v.string(),
+    sizeKb: v.number(),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    submittedAt: v.string(),
+  }).index("by_status", ["status"]).index("by_handle_game", ["handle", "game"]),
 });
