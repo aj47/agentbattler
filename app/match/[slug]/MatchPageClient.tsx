@@ -6,14 +6,8 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard } from "../../../components/ui";
 import { HoloBoardGo } from "../../../components/boards";
-import { ThreeChessSimulation } from "../../../components/ThreeChessSimulation";
 import { LiveChat } from "../../../components/LiveChat";
 import type { Agent, Match, Stone, ChatMessage } from "../../../lib/types";
-
-const DEFAULT_CHESS_NOTATION = `# CHESS 8x8  ·  LIVE FEN
-1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. d3 Bc5
-5. c3 d6 6. O-O a6 7. Re1 Ba7 8. h3 h6
-9. Nbd2 g5 10. Nf1 g4 11. hxg4 Bxg4`;
 
 export default function MatchPageClient({ slug }: { slug: string }) {
   const match = useQuery(api.queries.matchBySlug, { slug });
@@ -22,7 +16,6 @@ export default function MatchPageClient({ slug }: { slug: string }) {
   const lastMove = useQuery(api.queries.featuredData, { key: "go_last_move" });
   const hot = useQuery(api.queries.featuredData, { key: "go_hot" });
   const notation = useQuery(api.queries.featuredData, { key: "go_notation" }) as string | null | undefined;
-  const chessNotation = useQuery(api.queries.featuredData, { key: "chess_notation" }) as string | null | undefined;
   const chat = useQuery(api.queries.allChatMessages);
   const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
 
@@ -66,27 +59,14 @@ export default function MatchPageClient({ slug }: { slug: string }) {
   const a = agentMap.get(m.a);
   const b = agentMap.get(m.b);
   if (!a || !b) return <div style={{ padding: 40 }}>Agent not found.</div>;
-  const isChess = m.game === "chess";
-  const gameLabel = m.game === "go19" ? "GO 19×19" : m.game === "checkers" ? "CHECKERS" : "CHESS 8×8";
-  const leftWin = Math.round(m.winProb * 100);
-  const rightWin = 100 - leftWin;
-  const displayNotation = isChess ? (chessNotation || DEFAULT_CHESS_NOTATION) : (notation || "");
 
-  const commentary = isChess
-    ? [
-      { t: "MOVE 34", text: "knight.gpt pins the f6 defender and opens a queen-side fork threat.", hot: true },
-      { t: "MOVE 33", text: "glorp-9 is hovering near a bishop sack. The eval refuses to stabilize.", hot: true },
-      { t: "MOVE 31", text: "White's knight pair controls the center lanes from f3 and c3.", hot: false },
-      { t: "MOVE 28", text: "Black spends 3.1M nodes searching the g-file attack.", hot: false },
-      { t: "MOVE 24", text: "Castle complete. Both agents are now out of book.", hot: false },
-    ]
-    : [
-      { t: "MOVE 127", text: "Stone.singer plays O10 — directly invading black's moyo.", hot: true },
-      { t: "MOVE 126", text: "Go.master.v3 with the double hane at K11. Classic shape.", hot: false },
-      { t: "MOVE 125", text: "W extends. The fight is on the right side now.", hot: false },
-      { t: "MOVE 124", text: "Black reads 14 plies ahead. 0.6s thinking time.", hot: false },
-      { t: "MOVE 122", text: "Stone-singer's 3-3 invasion here is now confirmed alive.", hot: true },
-    ];
+  const commentary = [
+    { t: "MOVE 127", text: "Stone.singer plays O10 — directly invading black's moyo.", hot: true },
+    { t: "MOVE 126", text: "Go.master.v3 with the double hane at K11. Classic shape.", hot: false },
+    { t: "MOVE 125", text: "W extends. The fight is on the right side now.", hot: false },
+    { t: "MOVE 124", text: "Black reads 14 plies ahead. 0.6s thinking time.", hot: false },
+    { t: "MOVE 122", text: "Stone-singer's 3-3 invasion here is now confirmed alive.", hot: true },
+  ];
 
   return (
     <div style={{
@@ -98,8 +78,8 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         <Panel>
           <div style={{ padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <Pill color="cyan">{isChess ? "WHITE · W" : "BLACK · B"}</Pill>
-              {(isChess ? thinking === "w" : thinking === "b") && (
+              <Pill color="cyan">BLACK · B</Pill>
+              {thinking === "b" && (
                 <span className="t-label" style={{ color: "var(--phos-cyan)" }}>
                   <span className="live-dot" style={{ background: "var(--phos-cyan)", boxShadow: "0 0 8px var(--phos-cyan)" }} /> THINKING
                 </span>
@@ -107,10 +87,10 @@ export default function MatchPageClient({ slug }: { slug: string }) {
             </div>
             <Link href={`/agent/${a.slug}`}><AgentCard agent={a} /></Link>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginTop: 14 }}>
-              <div><div className="t-label" style={{ fontSize: 9 }}>{isChess ? "MATERIAL" : "TERRITORY"}</div>
-                <div className="t-num" style={{ fontSize: 24, color: "var(--phos-cyan)", textShadow: "var(--glow-cyan)" }}>{isChess ? "+1.7" : "58.5"}</div></div>
-              <div><div className="t-label" style={{ fontSize: 9 }}>{isChess ? "NODES" : "CAPTURES"}</div>
-                <div className="t-num" style={{ fontSize: 24, color: "var(--ink-100)" }}>{isChess ? "2.8M" : "12"}</div></div>
+              <div><div className="t-label" style={{ fontSize: 9 }}>TERRITORY</div>
+                <div className="t-num" style={{ fontSize: 24, color: "var(--phos-cyan)", textShadow: "var(--glow-cyan)" }}>58.5</div></div>
+              <div><div className="t-label" style={{ fontSize: 9 }}>CAPTURES</div>
+                <div className="t-num" style={{ fontSize: 24, color: "var(--ink-100)" }}>12</div></div>
               <div><div className="t-label" style={{ fontSize: 9 }}>CLOCK</div>
                 <div className="t-num" style={{ fontSize: 16, color: "var(--ink-100)" }}>04:12</div></div>
               <div><div className="t-label" style={{ fontSize: 9 }}>AVG THINK</div>
@@ -119,9 +99,9 @@ export default function MatchPageClient({ slug }: { slug: string }) {
           </div>
         </Panel>
 
-        <Panel label={`▮ NOTATION · ${isChess ? "PGN" : "SGF"}`} right={<span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>{isChess ? "FEN" : "FEN-LIKE"}</span>}>
+        <Panel label="▮ NOTATION · SGF" right={<span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>FEN-LIKE</span>}>
           <pre style={{ padding: "10px 12px", fontSize: 10, lineHeight: 1.5, fontFamily: "var(--font-mono)", color: "var(--ink-200)", overflow: "auto", maxHeight: 260, whiteSpace: "pre-wrap", background: "var(--bg-void)" }}>
-            {displayNotation}
+            {notation || ""}
           </pre>
         </Panel>
 
@@ -148,7 +128,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
               <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE</span>
               <span className="t-label">ARENA 01 · HOLO</span>
               <span className="t-label">·</span>
-              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
+              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>GO 19×19</span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button className="btn">◉ CAM 1</button>
@@ -170,9 +150,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
               ))}
             </div>
 
-            {isChess
-              ? <ThreeChessSimulation size={560} />
-              : <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={560} tilt={42} />}
+            <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={560} tilt={42} />
 
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
               {emojiStream.map(e => (
@@ -195,13 +173,13 @@ export default function MatchPageClient({ slug }: { slug: string }) {
 
           <div style={{ padding: "12px 16px", borderTop: "1px solid var(--line)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{isChess ? "W" : "B"} · {a.handle} · {leftWin}%</span>
+              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>B · {a.handle} · 58%</span>
               <span className="t-label">WIN PROBABILITY</span>
-              <span className="t-label" style={{ color: "var(--phos-amber)" }}>{rightWin}% · {b.handle} · {isChess ? "B" : "W"}</span>
+              <span className="t-label" style={{ color: "var(--phos-amber)" }}>42% · {b.handle} · W</span>
             </div>
             <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-              <div style={{ width: `${leftWin}%`, background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)" }} />
-              <div style={{ width: `${rightWin}%`, background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)" }} />
+              <div style={{ width: "58%", background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)" }} />
+              <div style={{ width: "42%", background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)" }} />
             </div>
 
             <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
@@ -225,8 +203,8 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         <Panel>
           <div style={{ padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <Pill color="amber">{isChess ? "BLACK · B" : "WHITE · W"}</Pill>
-              {(isChess ? thinking === "b" : thinking === "w") && (
+              <Pill color="amber">WHITE · W</Pill>
+              {thinking === "w" && (
                 <span className="t-label" style={{ color: "var(--phos-amber)" }}>
                   <span className="live-dot" style={{ background: "var(--phos-amber)", boxShadow: "0 0 8px var(--phos-amber)" }} /> THINKING
                 </span>
@@ -234,10 +212,10 @@ export default function MatchPageClient({ slug }: { slug: string }) {
             </div>
             <Link href={`/agent/${b.slug}`}><AgentCard agent={b} /></Link>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginTop: 14 }}>
-              <div><div className="t-label" style={{ fontSize: 9 }}>{isChess ? "MATERIAL" : "TERRITORY"}</div>
-                <div className="t-num" style={{ fontSize: 24, color: "var(--phos-amber)", textShadow: "var(--glow-amber)" }}>{isChess ? "-1.7" : "47.0"}</div></div>
-              <div><div className="t-label" style={{ fontSize: 9 }}>{isChess ? "NODES" : "CAPTURES"}</div>
-                <div className="t-num" style={{ fontSize: 24, color: "var(--ink-100)" }}>{isChess ? "3.1M" : "8"}</div></div>
+              <div><div className="t-label" style={{ fontSize: 9 }}>TERRITORY</div>
+                <div className="t-num" style={{ fontSize: 24, color: "var(--phos-amber)", textShadow: "var(--glow-amber)" }}>47.0</div></div>
+              <div><div className="t-label" style={{ fontSize: 9 }}>CAPTURES</div>
+                <div className="t-num" style={{ fontSize: 24, color: "var(--ink-100)" }}>8</div></div>
               <div><div className="t-label" style={{ fontSize: 9 }}>CLOCK</div>
                 <div className="t-num" style={{ fontSize: 16, color: "var(--ink-100)" }}>03:48</div></div>
               <div><div className="t-label" style={{ fontSize: 9 }}>AVG THINK</div>
