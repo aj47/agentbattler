@@ -172,82 +172,85 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         </Panel>
 
         {/* Bet history panel */}
-        <Panel
-          label="◈ BET HISTORY"
-          right={
-            !finished && (
-              <button className="btn primary" style={{ fontSize: 9, padding: "3px 10px" }}
-                onClick={() => { setBetSide(null); setBetStatus("idle"); setBetError(""); setModalOpen(true); }}>
-                PLACE BET
-              </button>
-            )
-          }
-          style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-        >
+        <Panel style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           {(() => {
             const poolA = matchBets?.poolA ?? 0;
             const poolB = matchBets?.poolB ?? 0;
             const total = matchBets?.total ?? 0;
             const myBets = matchBets?.myBets ?? [];
+            const pctA = total > 0 ? Math.round((poolA / total) * 100) : 50;
+            const pctB = 100 - pctA;
             return (
               <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-                {/* Pool summary */}
-                <div style={{ padding: "8px 14px 6px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span className="t-label" style={{ color: "var(--phos-cyan)", fontSize: 9 }}>{a.handle}</span>
-                    <span className="t-label" style={{ fontSize: 9, color: "var(--ink-400)" }}>
-                      ${total.toLocaleString()} · {matchBets?.count ?? 0} BETS
-                    </span>
-                    <span className="t-label" style={{ color: "var(--phos-amber)", fontSize: 9 }}>{b.handle}</span>
+
+                {/* Panel header row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.14em", color: "var(--ink-300)" }}>◈ BET HISTORY</span>
+                  {!finished && (
+                    <button onClick={() => { setBetSide(null); setBetStatus("idle"); setBetError(""); setModalOpen(true); }}
+                      style={{
+                        background: "transparent", border: "1px solid var(--phos-cyan)",
+                        color: "var(--phos-cyan)", fontFamily: "var(--font-mono)", fontSize: 10,
+                        letterSpacing: "0.12em", padding: "4px 12px", cursor: "pointer",
+                      }}>
+                      PLACE BET
+                    </button>
+                  )}
+                </div>
+
+                {/* Pool totals */}
+                <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "var(--ink-400)", letterSpacing: "0.1em", marginBottom: 3 }}>TOTAL POOL</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 20, color: "var(--ink-100)" }}>${total.toLocaleString()}</div>
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--ink-400)", textAlign: "right" }}>
+                      {matchBets?.count ?? 0} BETS
+                    </div>
                   </div>
-                  <div style={{ display: "flex", height: 4, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-                    <div style={{ width: total > 0 ? `${(poolA / total) * 100}%` : "50%", background: "var(--phos-cyan)", transition: "width 0.6s ease" }} />
+
+                  {/* Split bar */}
+                  <div style={{ display: "flex", height: 6, gap: 1 }}>
+                    <div style={{ width: `${pctA}%`, background: "var(--phos-cyan)", transition: "width 0.6s ease" }} />
                     <div style={{ flex: 1, background: "var(--phos-amber)" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--phos-cyan)" }}>{a.handle} {pctA}%</span>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--phos-amber)" }}>{pctB}% {b.handle}</span>
                   </div>
                 </div>
 
                 {/* My bets */}
                 {myBets.length > 0 && (
                   <div style={{ borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
-                    <div className="t-label" style={{ fontSize: 8, padding: "6px 14px 2px", color: "var(--ink-400)" }}>MY BETS</div>
-                    {myBets.map((bet, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 14px", borderBottom: i < myBets.length - 1 ? "1px solid var(--line)" : "none" }}>
-                        <span className="t-label" style={{ fontSize: 9, color: bet.side === "a" ? "var(--phos-cyan)" : "var(--phos-amber)" }}>
-                          {bet.side === "a" ? a.handle : b.handle}
-                        </span>
-                        <span className="t-num" style={{ fontSize: 10 }}>${bet.amount.toLocaleString()} <span style={{ color: "var(--ink-400)" }}>@ {bet.odds}x</span></span>
-                        <span className="t-label" style={{ fontSize: 9, color: bet.status === "won" ? "var(--phos-green)" : bet.status === "lost" ? "var(--phos-red)" : "var(--ink-400)" }}>
-                          {bet.status === "open" ? "OPEN" : bet.status === "won" ? `+$${((bet.payout ?? 0)).toLocaleString()}` : "LOST"}
-                        </span>
-                      </div>
-                    ))}
+                    <div style={{ padding: "8px 14px 4px", fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.14em", color: "var(--ink-400)" }}>MY BETS</div>
+                    {myBets.map((bet, i) => {
+                      const sideColor = bet.side === "a" ? "var(--phos-cyan)" : "var(--phos-amber)";
+                      const statusColor = bet.status === "won" ? "var(--phos-green)" : bet.status === "lost" ? "var(--phos-red)" : "var(--ink-400)";
+                      return (
+                        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "center", padding: "7px 14px", borderTop: "1px solid var(--line)" }}>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: sideColor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {bet.side === "a" ? a.handle : b.handle}
+                          </span>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-200)" }}>
+                            ${bet.amount.toLocaleString()}
+                          </span>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: statusColor, textAlign: "right" }}>
+                            {bet.status === "won" ? `+$${(bet.payout ?? 0).toLocaleString()}` : bet.status === "lost" ? "LOST" : `@ ${bet.odds}x`}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* Recent bets feed */}
-                <div style={{ flex: 1, overflowY: "auto" }}>
-                  {(matchBets?.count ?? 0) === 0 ? (
-                    <div style={{ padding: "24px 14px", textAlign: "center", color: "var(--ink-400)", fontFamily: "var(--font-mono)", fontSize: 10 }}>
-                      NO BETS YET
-                    </div>
-                  ) : (
-                    // Show aggregate rows since we don't have individual bet details publicly
-                    [
-                      { side: "a", label: a.handle, amount: poolA, color: "cyan" },
-                      { side: "b", label: b.handle, amount: poolB, color: "amber" },
-                    ].map(row => (
-                      <div key={row.side} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid var(--line)" }}>
-                        <span className="t-label" style={{ color: `var(--phos-${row.color})`, fontSize: 10 }}>{row.label}</span>
-                        <div style={{ textAlign: "right" }}>
-                          <div className="t-num" style={{ fontSize: 13 }}>${row.amount.toLocaleString()}</div>
-                          <div className="t-label" style={{ fontSize: 8, color: "var(--ink-400)" }}>
-                            {total > 0 ? `${Math.round((row.amount / total) * 100)}% OF POOL` : "—"}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {/* Empty state */}
+                {(matchBets?.count ?? 0) === 0 && (
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-500)", letterSpacing: "0.12em" }}>NO BETS YET</span>
+                  </div>
+                )}
               </div>
             );
           })()}
