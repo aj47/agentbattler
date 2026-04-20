@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
-import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers, MiniBoard } from "../components/boards";
+import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../components/boards";
 import { boardToStones } from "../lib/games/index";
 import type { Agent, Match, Highlight } from "../lib/types";
 import type { GoBoard } from "../lib/games/go";
@@ -41,12 +41,25 @@ export default function LobbyPage() {
     featured ? { slug: featured.slug } : "skip",
   );
 
+  const allMatchStates = useQuery(api.queries.allMatchStates);
+
+  const stateBySlug = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof allMatchStates>[number]>();
+    (allMatchStates ?? []).forEach(s => map.set(s.matchSlug, s));
+    return map;
+  }, [allMatchStates]);
+
+  // Init simulation for every live/starting match that doesn't have a state yet
   useEffect(() => {
-    if (featured && featuredState === null) {
-      const game = featured.game as "chess" | "go19" | "checkers";
-      initMatch({ slug: featured.slug, game }).catch(() => {});
+    if (!matches || !allMatchStates) return;
+    for (const m of matches as Match[]) {
+      if (m.status !== "live" && m.status !== "starting" && m.status !== "featured") continue;
+      const hasState = allMatchStates.some(s => s.matchSlug === m.slug);
+      if (!hasState) {
+        initMatch({ slug: m.slug, game: m.game as "chess" | "go19" | "checkers" }).catch(() => {});
+      }
     }
-  }, [featured, featuredState, initMatch]);
+  }, [matches, allMatchStates, initMatch]);
 
   const others = useMemo(() => {
     if (!matches || !featured) return (matches as Match[] | undefined) ?? [];
@@ -252,18 +265,45 @@ export default function LobbyPage() {
             const a = agentMap.get(m.a)!;
             const b = agentMap.get(m.b)!;
             const short = m.game === "go19" ? "GO19" : m.game === "chess" ? "CHESS" : "CHKR";
+            const ms = stateBySlug.get(m.slug);
+            const liveMove = ms?.moveCount ?? m.move;
+            const livePhase = ms?.phase ?? m.phase;
+            const liveWinB = ms ? Math.round(ms.winProbB * 100) : 50;
+            const liveWinW = 100 - liveWinB;
+
+            let miniBoard: React.ReactNode;
+            if (m.game === "go19") {
+              const goBoard = ms?.board as GoBoard | undefined;
+              const stones = goBoard ? boardToStones(goBoard) : [];
+              const lm = ms?.lastMove as { x: number; y: number; c: "b" | "w" } | null | undefined;
+              miniBoard = <HoloBoardGo stones={stones} lastMove={lm ?? null} hot={[]} size={200} tilt={42} />;
+            } else if (m.game === "chess") {
+              const chessBoard = ms?.board as ChessBoard | undefined;
+              miniBoard = <HoloBoardChess board={chessBoard} size={200} tilt={36} />;
+            } else {
+              const discs = ms?.board as CheckersDisc[] | undefined;
+              miniBoard = <HoloBoardCheckers discs={discs} size={200} tilt={36} />;
+            }
+
             return (
               <Panel key={m._id} className="match-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderBottom: "1px solid var(--line)" }}>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {m.status === "live" && <LiveDot />}
+                    {(m.status === "live" || m.status === "featured") && <LiveDot />}
                     <Pill color={m.status === "starting" ? "amber" : "green"}>{m.status === "starting" ? "SOON" : "LIVE"}</Pill>
                     <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{short}</span>
                   </div>
                   <span className="t-label">👁 {m.viewers.toLocaleString()}</span>
                 </div>
-                <div style={{ padding: "12px 14px 4px", display: "flex", justifyContent: "center" }}>
-                  <MiniBoard game={m.game} size={200} />
+
+                {/* Win prob bar */}
+                <div style={{ display: "flex", height: 3 }}>
+                  <div style={{ width: `${liveWinB}%`, background: "var(--phos-cyan)", transition: "width 0.8s ease" }} />
+                  <div style={{ width: `${liveWinW}%`, background: "var(--phos-amber)", transition: "width 0.8s ease" }} />
+                </div>
+
+                <div style={{ padding: "10px 14px 4px", display: "flex", justifyContent: "center" }}>
+                  {miniBoard}
                 </div>
                 <div style={{ padding: "4px 12px 12px" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
@@ -278,8 +318,8 @@ export default function LobbyPage() {
                     </div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 10, color: "var(--ink-300)" }}>
-                    <span className="t-label">MV {m.move}</span>
-                    <span className="t-label">{m.phase.toUpperCase()}</span>
+                    <span className="t-label">MV {liveMove}</span>
+                    <span className="t-label">{livePhase.toUpperCase()}</span>
                     <Link href={`/match/${m.slug}`} style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", color: "var(--phos-cyan)" }}>
                       WATCH →
                     </Link>
