@@ -38,8 +38,13 @@ export const matchBySlug = query({
 
 export const featuredMatch = query({
   args: {},
-  handler: async (ctx) =>
-    ctx.db.query("matches").withIndex("by_status", q => q.eq("status", "featured")).first(),
+  handler: async (ctx) => {
+    const matches = await ctx.db.query("matches").collect();
+    return matches.find(m => m.status === "featured" && m.game === "chess")
+      ?? matches.find(m => m.game === "chess")
+      ?? matches.find(m => m.status === "featured")
+      ?? null;
+  },
 });
 
 export const allHighlights = query({

@@ -81,13 +81,14 @@ export function HoloBoardGo({
   );
 }
 
-export function HoloBoardChess({ size = 220, tilt = 36, fen }: { size?: number; tilt?: number; fen?: string }) {
-  const f = fen || "r3kb1r/ppp2ppp/2n1bn2/3pp3/3PP3/2N1BN2/PPP2PPP/R3KB1R";
+export function HoloBoardChess({ size = 220, tilt = 52, fen, showLabels = true }: { size?: number; tilt?: number; fen?: string; showLabels?: boolean }) {
+  const f = fen || "rnbqkbnr/pppppppp/8/3P4/4p3/2N2N2/PPP1PPPP/R1BQKB1R";
   const pieces: Record<string, string> = {
     K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
     k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟",
   };
-  const rows = f.split("/").slice(0, 8);
+  const names: Record<string, string> = { K: "KING", Q: "QUEEN", R: "ROOK", B: "BISHOP", N: "KNIGHT", P: "PAWN" };
+  const rows = f.split(" ")[0].split("/").slice(0, 8);
   const cells: { x: number; y: number; p: string }[] = [];
   rows.forEach((row, y) => {
     let x = 0;
@@ -96,36 +97,57 @@ export function HoloBoardChess({ size = 220, tilt = 36, fen }: { size?: number; 
       else { cells.push({ x, y, p: ch }); x++; }
     }
   });
-  const pad = 10;
-  const step = (size - pad * 2) / 8;
+  const pad = size * 0.105;
+  const board = size - pad * 2;
+  const step = board / 8;
+  const depth = Math.max(10, size * 0.06);
+  const files = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
   return (
-    <div style={{ perspective: "1000px", width: size, height: size * 0.78, position: "relative" }}>
-      <div style={{ position: "absolute", left: "50%", bottom: "-8%", width: size * 0.85, height: 20, transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(255,181,71,0.35), transparent 70%)", filter: "blur(10px)" }} />
-      <div style={{ width: size, height: size, transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%", position: "relative" }}>
-        <svg width={size} height={size}>
-          {Array.from({ length: 8 }).map((_, y) =>
-            Array.from({ length: 8 }).map((_, x) => {
-              const dark = (x + y) % 2 === 1;
-              return (
-                <rect key={`${x}-${y}`} x={pad + x * step} y={pad + y * step} width={step} height={step}
-                  fill={dark ? "rgba(95,240,230,0.10)" : "rgba(95,240,230,0.02)"}
-                  stroke="rgba(95,240,230,0.3)" strokeWidth="0.4" />
-              );
-            })
-          )}
-          {cells.map((c, i) => {
-            const isWhite = c.p === c.p.toUpperCase();
-            const color = isWhite ? "var(--phos-cyan)" : "var(--phos-amber)";
+    <div style={{ perspective: size * 2.9, perspectiveOrigin: "50% 12%", width: size, height: size * 0.86, position: "relative" }} aria-label="3D holographic chess board">
+      <div style={{ position: "absolute", left: "50%", bottom: "1%", width: size * 0.96, height: size * 0.2, transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(95,240,230,0.32), rgba(255,181,71,0.12) 42%, transparent 72%)", filter: "blur(16px)", opacity: 0.95 }} />
+      <div style={{ position: "absolute", left: "50%", top: size * 0.035, width: size, height: size, transform: `translateX(-50%) rotateX(${tilt}deg) rotateZ(-2deg)`, transformOrigin: "50% 62%", transformStyle: "preserve-3d" }}>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(95,240,230,0.05), rgba(95,240,230,0.012))", border: "1px solid rgba(95,240,230,0.58)", boxShadow: "inset 0 0 46px rgba(95,240,230,0.1), 0 0 42px rgba(95,240,230,0.22)", transform: `translateZ(${depth}px)` }} />
+        <div style={{ position: "absolute", left: pad * 0.42, right: pad * 0.42, bottom: pad * 0.18, height: depth, background: "linear-gradient(180deg, rgba(95,240,230,0.22), rgba(95,240,230,0.035))", border: "1px solid rgba(95,240,230,0.3)", transformOrigin: "50% 0%", transform: `rotateX(-90deg) translateZ(${depth}px)` }} />
+        <div style={{ position: "absolute", inset: pad * 0.42, border: "1px solid rgba(95,240,230,0.85)", boxShadow: "0 0 18px rgba(95,240,230,0.24)", transform: `translateZ(${depth + 1}px)` }} />
+        <div style={{ position: "absolute", inset: pad * 0.2, border: "1px solid rgba(255,181,71,0.38)", transform: `translateZ(${depth + 2}px)` }} />
+
+        {Array.from({ length: 8 }).map((_, y) =>
+          Array.from({ length: 8 }).map((_, x) => {
+            const dark = (x + y) % 2 === 1;
             return (
-              <text key={i} x={pad + c.x * step + step / 2} y={pad + c.y * step + step / 2 + step * 0.28}
-                textAnchor="middle" fontSize={step * 0.75} fill={color}
-                style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
-                {pieces[c.p] || "?"}
-              </text>
+              <div key={`${x}-${y}`} style={{
+                position: "absolute", left: pad + x * step, top: pad + y * step, width: step, height: step,
+                background: dark ? "rgba(95,240,230,0.13)" : "rgba(232,236,247,0.025)",
+                border: "1px solid rgba(95,240,230,0.28)", transform: `translateZ(${depth + 3}px)`,
+              }} />
             );
-          })}
-        </svg>
+          })
+        )}
+
+        {showLabels && files.map((file, i) => (
+          <span key={file} className="t-label" style={{ position: "absolute", left: pad + i * step + step / 2, top: size - pad * 0.58, transform: `translate(-50%, -50%) translateZ(${depth + 5}px)`, color: "var(--phos-cyan)", fontSize: Math.max(7, size * 0.02), textShadow: "0 0 8px rgba(95,240,230,0.8)" }}>{file}</span>
+        ))}
+        {showLabels && ranks.map((rank, i) => (
+          <span key={rank} className="t-label" style={{ position: "absolute", right: pad * 0.44, top: pad + i * step + step / 2, transform: `translate(50%, -50%) translateZ(${depth + 5}px)`, color: "var(--phos-amber)", fontSize: Math.max(7, size * 0.02), textShadow: "0 0 8px rgba(255,181,71,0.75)" }}>{rank}</span>
+        ))}
+
+        {cells.map((c, i) => {
+          const isWhite = c.p === c.p.toUpperCase();
+          const color = isWhite ? "var(--phos-cyan)" : "var(--phos-amber)";
+          return (
+            <div key={i} title={`${isWhite ? "White" : "Black"} ${names[c.p.toUpperCase()] || "PIECE"}`} style={{
+              position: "absolute", left: pad + c.x * step + step / 2, top: pad + c.y * step + step / 2,
+              width: step, height: step, transform: `translate(-50%, -50%) translateZ(${depth + 8 + (7 - c.y) * 0.18}px) rotateX(-${tilt}deg)`,
+              transformStyle: "preserve-3d", display: "grid", placeItems: "center", zIndex: 20 + c.y,
+            }}>
+              <div style={{ position: "absolute", width: step * 0.62, height: step * 0.62, borderRadius: "50%", border: `1px solid ${color}`, boxShadow: `0 0 12px ${color}`, opacity: 0.62, transform: "rotateX(70deg) translateY(16%)" }} />
+              <div style={{ position: "absolute", width: step * 0.42, height: step * 0.42, borderRadius: "50%", border: `1px solid ${color}`, opacity: 0.45, transform: "rotateX(70deg) translateY(16%)" }} />
+              <span style={{ fontSize: step * 0.9, lineHeight: 1, color, textShadow: `0 0 10px ${color}, 0 0 22px ${color}`, filter: "drop-shadow(0 12px 10px rgba(0,0,0,0.55))" }}>{pieces[c.p] || "?"}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

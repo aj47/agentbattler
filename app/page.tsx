@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
 import { HoloBoardGo, MiniBoard } from "../components/boards";
+import { ThreeChessSimulation } from "../components/ThreeChessSimulation";
 import type { Agent, Match, Highlight, Stone } from "../lib/types";
 
 export default function LobbyPage() {
@@ -41,12 +42,25 @@ export default function LobbyPage() {
     return <div style={{ padding: 40, color: "var(--ink-300)" }}>LOADING…</div>;
   }
 
-  const featured = (matches as Match[]).find(m => m.status === "featured");
-  const others = (matches as Match[]).filter(m => m.status !== "featured");
+  const matchRows = matches as Match[];
+  const featured = matchRows.find(m => m.status === "featured" && m.game === "chess")
+    ?? matchRows.find(m => m.game === "chess")
+    ?? matchRows.find(m => m.status === "featured");
   if (!featured) return <div style={{ padding: 40 }}>No featured match yet. Seed the DB.</div>;
+  const others = matchRows.filter(m => m.slug !== featured.slug);
 
   const featA = agentMap.get(featured.a)!;
   const featB = agentMap.get(featured.b)!;
+  const isFeaturedChess = featured.game === "chess";
+  const gameLabel = featured.game === "go19" ? "GO 19×19" : featured.game === "checkers" ? "CHECKERS" : "CHESS 8×8";
+  const leftWin = Math.round(featured.winProb * 100);
+  const rightWin = 100 - leftWin;
+  const leftStats = isFeaturedChess
+    ? [{ label: "MATERIAL", value: "+1.7", color: "var(--phos-cyan)" }, { label: "CLOCK", value: "03:41", color: "var(--ink-100)" }, { label: "NODES", value: "2.8M", color: "var(--ink-100)" }, { label: "TACTIC", value: "PIN", color: "var(--phos-cyan)" }]
+    : [{ label: "TERRITORY", value: "58.5", color: "var(--phos-cyan)" }, { label: "CAPTURES", value: "12", color: "var(--ink-100)" }, { label: "TIME", value: "4:12", color: "var(--ink-100)" }, { label: "INFLUENCE", value: "+14.2", color: "var(--phos-cyan)" }];
+  const rightStats = isFeaturedChess
+    ? [{ label: "MATERIAL", value: "-1.7", color: "var(--phos-amber)" }, { label: "CLOCK", value: "04:08", color: "var(--ink-100)" }, { label: "NODES", value: "3.1M", color: "var(--ink-100)" }, { label: "THREAT", value: "Q-SAC", color: "var(--phos-amber)" }]
+    : [{ label: "TERRITORY", value: "47.0", color: "var(--phos-amber)" }, { label: "CAPTURES", value: "8", color: "var(--ink-100)" }, { label: "TIME", value: "3:48", color: "var(--ink-100)" }, { label: "INFLUENCE", value: "-14.2", color: "var(--phos-amber)" }];
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, padding: "20px 24px", maxWidth: 1760, margin: "0 auto" }}>
@@ -62,7 +76,7 @@ export default function LobbyPage() {
               <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE · FEATURED</span>
               <span className="t-label">MATCH #{featured.slug.slice(1)}</span>
               <span className="t-label">·</span>
-              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>GO 19×19</span>
+              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
               <span className="t-label">·</span>
               <span className="t-label">MOVE {featured.move}</span>
             </div>
@@ -80,35 +94,36 @@ export default function LobbyPage() {
               <span className="t-label">{featB.handle}</span>
             </div>
             <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-              <div style={{ width: "58%", background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)" }} />
-              <div style={{ width: "42%", background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)" }} />
+              <div style={{ width: `${leftWin}%`, background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)" }} />
+              <div style={{ width: `${rightWin}%`, background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)" }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>58%</span>
-              <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>42%</span>
+              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>{leftWin}%</span>
+              <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>{rightWin}%</span>
             </div>
           </div>
 
           {/* Agent cards in 2-col row above board */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "12px 24px 6px" }}>
-            <AgentCard agent={featA} side="L" score="B" />
-            <AgentCard agent={featB} side="R" score="W" />
+            <AgentCard agent={featA} side="L" score={isFeaturedChess ? "W" : "B"} />
+            <AgentCard agent={featB} side="R" score={isFeaturedChess ? "B" : "W"} />
           </div>
 
           {/* 3-col: left stats | board | right stats + embedded CUP */}
           <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 220px", gap: 20, padding: "10px 24px 20px", alignItems: "start" }}>
             <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)" }}>
-              <div className="t-label" style={{ color: "var(--phos-cyan)", marginBottom: 8 }}>B · BLACK</div>
+              <div className="t-label" style={{ color: "var(--phos-cyan)", marginBottom: 8 }}>{isFeaturedChess ? "W · WHITE" : "B · BLACK"}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 18 }}>58.5</div></div>
-                <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>12</div></div>
-                <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>4:12</div></div>
-                <div>INFLUENCE <div className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 14 }}>+14.2</div></div>
+                {leftStats.map((stat, i) => (
+                  <div key={stat.label}>{stat.label} <div className="t-num" style={{ color: stat.color, fontSize: i === 0 ? 18 : 14 }}>{stat.value}</div></div>
+                ))}
               </div>
             </div>
 
             <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
-              <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={460} tilt={40} />
+              {isFeaturedChess
+                ? <ThreeChessSimulation size={460} />
+                : <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={460} tilt={40} />}
               <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
                 {emojiStream.map(e => (
                   <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: 22, animation: `floatUp ${e.dur}s linear forwards`, opacity: 0.85 }}>
@@ -120,12 +135,11 @@ export default function LobbyPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)", textAlign: "right" }}>
-                <div className="t-label" style={{ color: "var(--phos-amber)", marginBottom: 8 }}>W · WHITE</div>
+                <div className="t-label" style={{ color: "var(--phos-amber)", marginBottom: 8 }}>{isFeaturedChess ? "B · BLACK" : "W · WHITE"}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-amber)", fontSize: 18 }}>47.0</div></div>
-                  <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>8</div></div>
-                  <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>3:48</div></div>
-                  <div>INFLUENCE <div className="t-num" style={{ color: "var(--phos-amber)", fontSize: 14 }}>-14.2</div></div>
+                  {rightStats.map((stat, i) => (
+                    <div key={stat.label}>{stat.label} <div className="t-num" style={{ color: stat.color, fontSize: i === 0 ? 18 : 14 }}>{stat.value}</div></div>
+                  ))}
                 </div>
               </div>
 

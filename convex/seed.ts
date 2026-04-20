@@ -22,9 +22,9 @@ const GAMES = [
 ];
 
 const MATCHES = [
-  { slug: 'm1845', game: 'chess',    a: 'knight_gpt',   b: 'glorp_9',      move: 34,  viewers: 1247, status: 'live',     phase: 'middlegame', winProb: 0.62 },
+  { slug: 'm1845', game: 'chess',    a: 'knight_gpt',   b: 'glorp_9',      move: 34,  viewers: 1247, status: 'featured', phase: 'middlegame', winProb: 0.62 },
   { slug: 'm1846', game: 'checkers', a: 'tofu_tactics', b: 'king_me_v2',   move: 22,  viewers: 412,  status: 'live',     phase: 'endgame',    winProb: 0.81 },
-  { slug: 'm1847', game: 'go19',     a: 'go_master_v3', b: 'stone_singer', move: 127, viewers: 8934, status: 'featured', phase: 'middlegame', winProb: 0.58 },
+  { slug: 'm1847', game: 'go19',     a: 'go_master_v3', b: 'stone_singer', move: 127, viewers: 8934, status: 'live',     phase: 'middlegame', winProb: 0.58 },
   { slug: 'm1848', game: 'chess',    a: 'quiet_storm',  b: 'baron_bluff',  move: 41,  viewers: 3201, status: 'live',     phase: 'endgame',    winProb: 0.73 },
   { slug: 'm1849', game: 'chess',    a: 'MEGA_BRAIN',   b: 'rook_botto',   move: 18,  viewers: 892,  status: 'live',     phase: 'opening',    winProb: 0.51 },
   { slug: 'm1850', game: 'checkers', a: 'checkmate42',  b: 'null_pointer', move: 29,  viewers: 227,  status: 'live',     phase: 'middlegame', winProb: 0.44 },
@@ -119,6 +119,15 @@ const FEATURED_GO_STONES = [
   {x:9,y:14,c:'w'},{x:13,y:12,c:'w'},{x:14,y:13,c:'w'},
 ];
 
+const FEATURED_CHESS_FEN = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 4 4';
+
+const FEATURED_CHESS_NOTATION = `# CHESS 8x8  ·  MATCH #1845  ·  MOVE 34
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. d3 Bc5
+5. c3 d6 6. O-O a6 7. Re1 Ba7 8. h3 h6
+9. Nbd2 g5 10. Nf1 g4 11. hxg4 Bxg4 12. Ne3 h5
+13. Qb3 Qd7 14. Ng5 Rf8 15. Qxb7 Rb8 16. Qxa6 Rg8
+17. Bxf7+ Kf8 18. Bxg8 Kxg8 19. Qc4+ Kg7`;
+
 const FEATURED_NOTATION = `# GO 19x19  ·  MATCH #1847  ·  MOVE 127
 B[dq];W[pd];B[pp];W[dc];B[ql];W[nq];B[qn];W[fq]
 B[ip];W[fo];B[cn];W[cl];B[cp];W[eq];B[dm];W[hq]
@@ -181,6 +190,8 @@ export const run = internalMutation({
     await ctx.db.insert("featured", { key: "go_last_move", data: { x: 10, y: 10, c: 'w' } });
     await ctx.db.insert("featured", { key: "go_hot", data: [{x:10,y:10},{x:9,y:9},{x:11,y:11}] });
     await ctx.db.insert("featured", { key: "go_notation", data: FEATURED_NOTATION });
+    await ctx.db.insert("featured", { key: "chess_fen", data: FEATURED_CHESS_FEN });
+    await ctx.db.insert("featured", { key: "chess_notation", data: FEATURED_CHESS_NOTATION });
     await ctx.db.insert("featured", { key: "profile_source", data: PROFILE_SOURCE_SNIPPET });
     await ctx.db.insert("featured", { key: "profile_pnl", data: PROFILE_PNL });
     await ctx.db.insert("featured", { key: "crowd_emoji", data: ['🔥','👑','💀','😤','🧠','⚡','😱','🎯','👀','🧊','🚫','💥','🗿','🫡','📈','📉'] });
