@@ -72,38 +72,8 @@ export default function LobbyPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 20, padding: "24px 24px 20px", alignItems: "center" }}>
-            <div>
-              <AgentCard agent={featA} side="L" score="B" />
-              <div style={{ padding: "10px 14px 0", fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)" }}>
-                <div>TERRITORY <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 14 }}>58.5</span></div>
-                <div style={{ marginTop: 4 }}>CAPTURES <span className="t-num" style={{ color: "var(--ink-100)" }}>12</span></div>
-                <div style={{ marginTop: 4 }}>TIME <span className="t-num" style={{ color: "var(--ink-100)" }}>4:12</span></div>
-              </div>
-            </div>
-
-            <div style={{ position: "relative" }}>
-              <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={460} tilt={40} />
-              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-                {emojiStream.map(e => (
-                  <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: 22, animation: `floatUp ${e.dur}s linear forwards`, opacity: 0.85 }}>
-                    {e.e}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <AgentCard agent={featB} side="R" score="W" />
-              <div style={{ padding: "10px 14px 0", fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)", textAlign: "right" }}>
-                <div>TERRITORY <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 14 }}>47.0</span></div>
-                <div style={{ marginTop: 4 }}>CAPTURES <span className="t-num" style={{ color: "var(--ink-100)" }}>8</span></div>
-                <div style={{ marginTop: 4 }}>TIME <span className="t-num" style={{ color: "var(--ink-100)" }}>3:48</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ padding: "0 24px 18px" }}>
+          {/* Win probability moved to TOP */}
+          <div style={{ padding: "14px 24px 4px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
               <span className="t-label">{featA.handle}</span>
               <span className="t-label">WIN PROBABILITY</span>
@@ -116,6 +86,77 @@ export default function LobbyPage() {
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
               <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>58%</span>
               <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>42%</span>
+            </div>
+          </div>
+
+          {/* Agent cards in 2-col row above board */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "12px 24px 6px" }}>
+            <AgentCard agent={featA} side="L" score="B" />
+            <AgentCard agent={featB} side="R" score="W" />
+          </div>
+
+          {/* 3-col: left stats | board | right stats + embedded CUP */}
+          <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 220px", gap: 20, padding: "10px 24px 20px", alignItems: "start" }}>
+            <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)" }}>
+              <div className="t-label" style={{ color: "var(--phos-cyan)", marginBottom: 8 }}>B · BLACK</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 18 }}>58.5</div></div>
+                <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>12</div></div>
+                <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>4:12</div></div>
+                <div>INFLUENCE <div className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 14 }}>+14.2</div></div>
+              </div>
+            </div>
+
+            <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
+              <HoloBoardGo stones={stones || []} lastMove={lastMove as any} hot={(hot as any) || []} size={460} tilt={40} />
+              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
+                {emojiStream.map(e => (
+                  <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: 22, animation: `floatUp ${e.dur}s linear forwards`, opacity: 0.85 }}>
+                    {e.e}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)", textAlign: "right" }}>
+                <div className="t-label" style={{ color: "var(--phos-amber)", marginBottom: 8 }}>W · WHITE</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div>TERRITORY <div className="t-num" style={{ color: "var(--phos-amber)", fontSize: 18 }}>47.0</div></div>
+                  <div>CAPTURES <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>8</div></div>
+                  <div>TIME <div className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>3:48</div></div>
+                  <div>INFLUENCE <div className="t-num" style={{ color: "var(--phos-amber)", fontSize: 14 }}>-14.2</div></div>
+                </div>
+              </div>
+
+              {/* Embedded CUP popover */}
+              <div style={{
+                border: "1px solid var(--phos-magenta)",
+                boxShadow: "0 0 18px rgba(255,99,199,0.18)",
+                background: "rgba(20,10,20,0.35)",
+                padding: 12,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span className="t-label" style={{ color: "var(--phos-magenta)" }}>◈ CUP S3</span>
+                  <Pill color="magenta">LIVE</Pill>
+                </div>
+                <div className="t-display" style={{ fontSize: 22, color: "var(--phos-cyan)", textShadow: "var(--glow-cyan)" }}>$48,000</div>
+                <div className="t-label" style={{ fontSize: 9, marginTop: 1 }}>PRIZE POOL</div>
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4, fontSize: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="t-mono">QUARTERS</span><span style={{ color: "var(--phos-green)" }}>DONE</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="t-mono">SEMIS</span><span style={{ color: "var(--phos-amber)" }}>LIVE</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="t-mono">FINAL</span><span className="t-num" style={{ color: "var(--ink-300)" }}>2:14:08</span>
+                  </div>
+                </div>
+                <Link href="/bracket" className="btn" style={{ width: "100%", marginTop: 10, justifyContent: "center", fontSize: 10 }}>
+                  VIEW BRACKET →
+                </Link>
+              </div>
             </div>
           </div>
         </Panel>
@@ -177,22 +218,8 @@ export default function LobbyPage() {
         </div>
       </div>
 
+      {/* Sidebar: LEADERBOARD first, then HIGHLIGHTS (CUP panel removed) */}
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <Panel label="◆ UPSETS & HIGHLIGHTS">
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {(highlights as Highlight[]).map((h, i) => (
-              <div key={i} style={{ padding: "12px 14px", borderBottom: i < highlights.length - 1 ? "1px solid var(--line)" : "none", cursor: "pointer" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <Pill color={h.color}>{h.tag}</Pill>
-                  <span className="t-label" style={{ fontSize: 9 }}>{h.when}</span>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--ink-100)", lineHeight: 1.3 }}>{h.title}</div>
-                <div className="t-num" style={{ fontSize: 10, color: `var(--phos-${h.color})`, marginTop: 3 }}>{h.delta}</div>
-              </div>
-            ))}
-          </div>
-        </Panel>
-
         <Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}>
           <div>
             {(leaderboard as Agent[]).slice(0, 10).map((a, i) => (
@@ -216,27 +243,18 @@ export default function LobbyPage() {
           </div>
         </Panel>
 
-        <Panel label="◈ VIBE CODE CUP S3" right={<Pill color="magenta">LIVE</Pill>}>
-          <div style={{ padding: 14 }}>
-            <div className="t-display" style={{ fontSize: 28, color: "var(--phos-cyan)", textShadow: "var(--glow-cyan)" }}>$48,000</div>
-            <div className="t-label" style={{ marginTop: 2 }}>PRIZE POOL · 6 AGENTS LEFT</div>
-            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
-                <span className="t-mono">QUARTERFINALS</span>
-                <span style={{ color: "var(--phos-green)" }}>COMPLETE</span>
+        <Panel label="◆ UPSETS & HIGHLIGHTS">
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {(highlights as Highlight[]).map((h, i) => (
+              <div key={i} style={{ padding: "12px 14px", borderBottom: i < highlights.length - 1 ? "1px solid var(--line)" : "none", cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <Pill color={h.color}>{h.tag}</Pill>
+                  <span className="t-label" style={{ fontSize: 9 }}>{h.when}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--ink-100)", lineHeight: 1.3 }}>{h.title}</div>
+                <div className="t-num" style={{ fontSize: 10, color: `var(--phos-${h.color})`, marginTop: 3 }}>{h.delta}</div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
-                <span className="t-mono">SEMIFINALS</span>
-                <span style={{ color: "var(--phos-amber)" }}>LIVE NOW</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
-                <span className="t-mono">GRAND FINAL</span>
-                <span className="t-num" style={{ color: "var(--ink-300)" }}>2:14:08</span>
-              </div>
-            </div>
-            <Link href="/bracket" className="btn primary" style={{ width: "100%", marginTop: 14, justifyContent: "center" }}>
-              VIEW BRACKET →
-            </Link>
+            ))}
           </div>
         </Panel>
       </div>

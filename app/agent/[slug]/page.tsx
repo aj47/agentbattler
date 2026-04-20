@@ -5,7 +5,53 @@ import { use, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Panel, Pill, AgentGlyph } from "../../../components/ui";
-import type { Agent } from "../../../lib/types";
+import type { Agent, ProfilePnl } from "../../../lib/types";
+
+function fmt$(n: number) {
+  const s = n < 0 ? "-" : "";
+  const v = Math.abs(n);
+  if (v >= 1000) return s + "$" + (v / 1000).toFixed(v >= 10000 ? 1 : 2).replace(/\.0+$/, "") + "k";
+  return s + "$" + v.toLocaleString();
+}
+
+function PnlChart({ data, color }: { data: number[]; color: string }) {
+  const W = 1200, H = 220, padY = 12;
+  const max = Math.max(...data);
+  const min = Math.min(0, ...data);
+  const range = max - min || 1;
+  const n = data.length;
+  const xFor = (i: number) => (i / (n - 1)) * W;
+  const yFor = (v: number) => H - padY - ((v - min) / range) * (H - padY * 2);
+
+  const pts = data.map((v, i) => `${xFor(i)},${yFor(v)}`).join(" L ");
+  const area = `M 0,${H} L ${pts} L ${W},${H} Z`;
+  const line = `M ${pts}`;
+
+  const gridStep = 50000;
+  const gridLines: number[] = [];
+  for (let v = Math.ceil(min / gridStep) * gridStep; v <= max; v += gridStep) gridLines.push(v);
+
+  const lastX = xFor(n - 1);
+  const lastY = yFor(data[n - 1]);
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+      {gridLines.map((v, i) => (
+        <g key={i}>
+          <line x1="0" y1={yFor(v)} x2={W} y2={yFor(v)} stroke="var(--line)" strokeWidth="0.5" strokeDasharray="3 4" />
+          <text x="6" y={yFor(v) - 3} fontSize="9" fill="var(--ink-400)" fontFamily="var(--font-mono)">${(v / 1000).toFixed(0)}k</text>
+        </g>
+      ))}
+      <path d={area} fill={color} opacity="0.15" />
+      <path d={line} fill="none" stroke={color} strokeWidth="1.8" style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
+      <circle cx={lastX} cy={lastY} r="5" fill={color} />
+      <circle cx={lastX} cy={lastY} r="10" fill="none" stroke={color} strokeWidth="1" opacity="0.6">
+        <animate attributeName="r" from="5" to="16" dur="1.4s" repeatCount="indefinite" />
+        <animate attributeName="opacity" from="0.8" to="0" dur="1.4s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  );
+}
 
 export default function AgentPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -13,7 +59,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
   const leaderboard = useQuery(api.queries.leaderboard);
   const matches = useQuery(api.queries.profileMatches, { agentSlug: slug });
   const allAgents = useQuery(api.queries.allAgents);
-  const source = useQuery(api.queries.featuredData, { key: "profile_source" }) as string | null | undefined;
+  const pnl = useQuery(api.queries.featuredData, { key: "profile_pnl" }) as ProfilePnl | null | undefined;
 
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
@@ -39,7 +85,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
       </div>
 
       <Panel>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 28, padding: "28px 32px", alignItems: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 28, padding: "28px 32px 18px", alignItems: "center", position: "relative", overflow: "hidden" }}>
           <div style={{
             position: "absolute", right: -60, top: "50%", transform: "translateY(-50%)",
             fontSize: 400, fontFamily: "var(--font-display)",
@@ -61,116 +107,82 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
               <Pill color="gray">{a.size}kb / 50kb</Pill>
             </div>
           </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, zIndex: 1 }}>
-            {[
-              { k: "ELO", v: a.elo, c: color },
-              { k: "WINRATE", v: winrate + "%", c: "var(--phos-green)" },
-              { k: "WINS", v: a.wins, c: "var(--ink-100)" },
-              { k: "LOSSES", v: a.loss, c: "var(--ink-100)" },
-            ].map((s, i) => (
-              <div key={i} style={{ padding: "10px 14px", border: "1px solid var(--line)", minWidth: 110 }}>
-                <div className="t-label" style={{ fontSize: 9 }}>{s.k}</div>
-                <div className="t-num" style={{ fontSize: 22, color: s.c, textShadow: i === 0 ? `0 0 10px ${color}` : "none" }}>{s.v}</div>
-              </div>
-            ))}
-          </div>
         </div>
 
-        <div style={{ padding: "0 32px 20px", marginTop: -6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span className="t-label" style={{ fontSize: 9 }}>SOURCE SIZE · {a.size}KB USED OF 50KB LIMIT</span>
-            <span className="t-num" style={{ fontSize: 10, color: "var(--ink-300)" }}>{Math.round((a.size / 50) * 100)}%</span>
+        {/* Top 4 stat cards */}
+        {pnl && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, padding: "0 32px 22px" }}>
+            <div style={{ padding: "14px 16px", border: "1px solid var(--phos-green)", boxShadow: "0 0 18px rgba(107,240,131,0.2)", background: "rgba(12,24,18,0.45)" }}>
+              <div className="t-label" style={{ fontSize: 9, color: "var(--phos-green)" }}>NET PNL · 30D</div>
+              <div className="t-num" style={{ fontSize: 30, color: "var(--phos-green)", textShadow: "0 0 10px var(--phos-green-glow)" }}>+{fmt$(pnl.total30d)}</div>
+              <div className="t-label" style={{ fontSize: 9, color: "var(--ink-300)", marginTop: 3 }}>7D · +{fmt$(pnl.total7d)}</div>
+            </div>
+            <div style={{ padding: "14px 16px", border: "1px solid var(--line)" }}>
+              <div className="t-label" style={{ fontSize: 9 }}>ALL-TIME</div>
+              <div className="t-num" style={{ fontSize: 24, color: "var(--ink-100)" }}>+{fmt$(pnl.totalAllTime)}</div>
+              <div className="t-label" style={{ fontSize: 9, color: "var(--ink-300)", marginTop: 3 }}>AVG TICKET · {fmt$(pnl.avgTicket)}</div>
+            </div>
+            <div style={{ padding: "14px 16px", border: "1px solid var(--line)" }}>
+              <div className="t-label" style={{ fontSize: 9 }}>SHARPE</div>
+              <div className="t-num" style={{ fontSize: 24, color: "var(--phos-cyan)" }}>{pnl.sharpe.toFixed(2)}</div>
+              <div className="t-label" style={{ fontSize: 9, color: "var(--phos-red)", marginTop: 3 }}>MAX DD · {fmt$(pnl.maxDrawdown)}</div>
+            </div>
+            <div style={{ padding: "14px 16px", border: "1px solid var(--line)" }}>
+              <div className="t-label" style={{ fontSize: 9 }}>WINRATE · ELO</div>
+              <div className="t-num" style={{ fontSize: 24, color }}>{winrate}% · {a.elo}</div>
+              <div className="t-label" style={{ fontSize: 9, color: "var(--ink-300)", marginTop: 3 }}>{a.wins}W · {a.loss}L</div>
+            </div>
           </div>
-          <div style={{ height: 4, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-            <div style={{ height: "100%", width: `${(a.size / 50) * 100}%`, background: color, boxShadow: `0 0 10px ${color}` }} />
-          </div>
-        </div>
+        )}
       </Panel>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 16, marginTop: 16 }}>
-        <Panel label="◂ SOURCE · MAIN.JS" right={<span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>READ-ONLY</span>}>
-          <pre style={{ padding: "14px 16px", fontSize: 11, lineHeight: 1.55, fontFamily: "var(--font-mono)", color: "var(--ink-200)", background: "var(--bg-void)", overflow: "auto", maxHeight: 380, whiteSpace: "pre-wrap" }}>
-            {(source || "").split("\n").map((line, i) => {
-              let c = "var(--ink-200)";
-              if (line.startsWith("//")) c = "var(--ink-400)";
-              else if (line.includes("export") || line.includes("return") || line.includes("const")) c = "var(--phos-magenta)";
-              else if (line.includes("function") || line.includes("act")) c = "var(--phos-cyan)";
-              return (
-                <div key={i} style={{ color: c, display: "flex" }}>
-                  <span style={{ color: "var(--ink-500)", width: 28, textAlign: "right", marginRight: 12, userSelect: "none" }}>{i + 1}</span>
-                  <span style={{ flex: 1 }}>{line}</span>
-                </div>
-              );
-            })}
-          </pre>
-        </Panel>
-
-        <Panel label="◆ ELO · LAST 30 DAYS">
-          <div style={{ padding: "18px 16px" }}>
-            <div style={{ position: "relative", height: 140 }}>
-              <svg width="100%" height="100%" viewBox="0 0 300 140" preserveAspectRatio="none">
-                {[0, 1, 2, 3, 4].map(i => (
-                  <line key={i} x1="0" y1={i * 35} x2="300" y2={i * 35} stroke="var(--line)" strokeWidth="0.5" />
-                ))}
-                <path d="M 0 90 L 20 80 L 40 82 L 60 70 L 80 75 L 100 62 L 120 55 L 140 60 L 160 45 L 180 50 L 200 40 L 220 35 L 240 30 L 260 32 L 280 22 L 300 18 L 300 140 L 0 140 Z" fill={color} opacity="0.15" />
-                <path d="M 0 90 L 20 80 L 40 82 L 60 70 L 80 75 L 100 62 L 120 55 L 140 60 L 160 45 L 180 50 L 200 40 L 220 35 L 240 30 L 260 32 L 280 22 L 300 18" fill="none" stroke={color} strokeWidth="1.4" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
-                <circle cx="300" cy="18" r="4" fill={color} />
-                <circle cx="300" cy="18" r="8" fill="none" stroke={color} strokeWidth="1" opacity="0.5">
-                  <animate attributeName="r" from="4" to="12" dur="1.4s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" from="0.8" to="0" dur="1.4s" repeatCount="indefinite" />
-                </circle>
-              </svg>
+      {/* Full-width equity curve */}
+      {pnl && (
+        <Panel
+          label="◆ PNL · EQUITY CURVE · LAST 30 DAYS"
+          right={
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <span className="t-label" style={{ fontSize: 9 }}>7D <span className="t-num" style={{ color: "var(--phos-green)", fontSize: 11 }}>+{fmt$(pnl.total7d)}</span></span>
+              <span className="t-label" style={{ fontSize: 9 }}>MAX DD <span className="t-num" style={{ color: "var(--phos-red)", fontSize: 11 }}>{fmt$(pnl.maxDrawdown)}</span></span>
+              <span className="t-label" style={{ fontSize: 9 }}>AVG TICKET <span className="t-num" style={{ color: "var(--ink-100)", fontSize: 11 }}>{fmt$(pnl.avgTicket)}</span></span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-              <div><div className="t-label" style={{ fontSize: 9 }}>30D AGO</div>
-                <div className="t-num" style={{ fontSize: 15, color: "var(--ink-300)" }}>2,754</div></div>
-              <div style={{ textAlign: "right" }}>
-                <div className="t-label" style={{ fontSize: 9 }}>NOW · Δ</div>
-                <div className="t-num" style={{ fontSize: 15, color: "var(--phos-green)" }}>+{a.elo - 2754}</div>
-              </div>
+          }
+          style={{ marginTop: 16 }}
+        >
+          <div style={{ padding: "16px 20px 10px" }}>
+            <PnlChart data={pnl.curve30d} color="var(--phos-green)" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, padding: "10px 20px 18px", borderTop: "1px solid var(--line)" }}>
+            <div>
+              <div className="t-label" style={{ fontSize: 9 }}>BIGGEST WIN</div>
+              <div className="t-num" style={{ fontSize: 18, color: "var(--phos-green)" }}>+{fmt$(pnl.biggestWin)}</div>
+            </div>
+            <div>
+              <div className="t-label" style={{ fontSize: 9 }}>BIGGEST LOSS</div>
+              <div className="t-num" style={{ fontSize: 18, color: "var(--phos-red)" }}>{fmt$(pnl.biggestLoss)}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div className="t-label" style={{ fontSize: 9 }}>NOW</div>
+              <div className="t-num" style={{ fontSize: 18, color: "var(--phos-green)", textShadow: "0 0 10px var(--phos-green-glow)" }}>+{fmt$(pnl.total30d)}</div>
             </div>
           </div>
         </Panel>
-
-        <Panel label="◇ TACTICAL DOSSIER">
-          <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 14 }}>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>FAVORITE OPENING</div>
-              <div className="t-mono" style={{ fontSize: 13, color: "var(--ink-100)", marginTop: 3 }}>4-4 / 3-4 Influence</div>
-              <div className="t-label" style={{ fontSize: 9, color: "var(--ink-400)", marginTop: 2 }}>USED IN 68% OF GAMES</div>
-            </div>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>SIGNATURE MOVE</div>
-              <div className="t-mono" style={{ fontSize: 13, color, marginTop: 3, textShadow: `0 0 6px ${color}` }}>3-3 INVASION (MOVE 28-42)</div>
-              <div className="t-label" style={{ fontSize: 9, color: "var(--ink-400)", marginTop: 2 }}>88% SUCCESS RATE</div>
-            </div>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>WEAKNESS</div>
-              <div className="t-mono" style={{ fontSize: 13, color: "var(--phos-red)", marginTop: 3 }}>KO FIGHTS · 51% WIN</div>
-              <div className="t-label" style={{ fontSize: 9, color: "var(--ink-400)", marginTop: 2 }}>OPPONENTS BAIT THIS OFTEN</div>
-            </div>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>QUIRK</div>
-              <div className="t-mono" style={{ fontSize: 13, color: "var(--ink-200)", marginTop: 3 }}>NEVER TENUKIS EARLY</div>
-              <div className="t-label" style={{ fontSize: 9, color: "var(--ink-400)", marginTop: 2 }}>0 TENUKI IN FIRST 20 MOVES</div>
-            </div>
-          </div>
-        </Panel>
-      </div>
+      )}
 
       <Panel label="◼ RECENT MATCHES" right={<button className="btn ghost" style={{ fontSize: 10 }}>VIEW ALL →</button>} style={{ marginTop: 16 }}>
         <div>
-          <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 100px 100px 80px 80px", padding: "8px 16px", borderBottom: "1px solid var(--line)", background: "var(--bg-panel-2)" }}>
-            {["RESULT", "OPPONENT", "GAME", "SCORE", "DATE", ""].map(h => (
+          <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 90px 90px 110px 70px 80px", padding: "8px 16px", borderBottom: "1px solid var(--line)", background: "var(--bg-panel-2)" }}>
+            {["RESULT", "OPPONENT", "GAME", "SCORE", "PNL", "DATE", ""].map(h => (
               <span key={h} className="t-label" style={{ fontSize: 9 }}>{h}</span>
             ))}
           </div>
           {(matches || []).map((m, i) => {
             const opp = agentMap.get(m.opp);
             const rc = m.result === "WIN" ? "var(--phos-green)" : m.result === "LOSS" ? "var(--phos-red)" : "var(--phos-cyan)";
+            const pc = m.pnl == null ? "var(--ink-400)" : m.pnl >= 0 ? "var(--phos-green)" : "var(--phos-red)";
+            const pnlStr = m.pnl == null ? "—" : (m.pnl >= 0 ? "+" : "") + fmt$(m.pnl);
             return (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 100px 100px 80px 80px", padding: "10px 16px", borderBottom: i < (matches || []).length - 1 ? "1px solid var(--line)" : "none", alignItems: "center" }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "90px 1fr 90px 90px 110px 70px 80px", padding: "10px 16px", borderBottom: i < (matches || []).length - 1 ? "1px solid var(--line)" : "none", alignItems: "center" }}>
                 <span className="t-mono" style={{ fontSize: 11, color: rc, fontWeight: 600, textShadow: `0 0 6px ${rc}` }}>
                   {m.result === "LIVE" ? "● LIVE" : m.result}
                 </span>
@@ -184,6 +196,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
                 )}
                 <span className="t-label" style={{ fontSize: 10, color: "var(--phos-cyan)" }}>{m.game}</span>
                 <span className="t-num" style={{ fontSize: 11, color: "var(--ink-200)" }}>{m.score}</span>
+                <span className="t-num" style={{ fontSize: 12, color: pc, textShadow: m.pnl != null && m.pnl !== 0 ? `0 0 6px ${pc}` : "none" }}>{pnlStr}</span>
                 <span className="t-label" style={{ fontSize: 9 }}>{m.date}</span>
                 <button className="btn ghost" style={{ fontSize: 9, padding: "4px 8px" }}>REPLAY</button>
               </div>

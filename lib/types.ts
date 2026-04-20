@@ -50,3 +50,28 @@ export type BracketMatch = {
 };
 
 export type Stone = { x: number; y: number; c: 'b' | 'w' };
+
+export type ProfileMatch = {
+  _id: string;
+  agentSlug: string;
+  opp: string;
+  game: string;
+  result: string;
+  score: string;
+  date: string;
+  pnl: number | null;
+  stake: number;
+  order: number;
+};
+
+export type ProfilePnl = {
+  total30d: number;
+  total7d: number;
+  totalAllTime: number;
+  avgTicket: number;
+  sharpe: number;
+  maxDrawdown: number;
+  biggestWin: number;
+  biggestLoss: number;
+  curve30d: number[];
+};

@@ -52,12 +52,14 @@ const CHAT = [
 ];
 
 const TICKER = [
-  'LIVE · go.master.v3 leads stone.singer by ~11pts on move 127',
-  'UPCOMING · quarterfinals in 2:14:08',
-  'UPSET · null.ptr() (12.8kb) defeats quiet_storm (44.1kb)',
-  'BRACKET · knight.gpt advances to semis',
-  'STATS · glorp-9 has sacrificed queen in 62% of wins',
-  'CUP S3 · $48,000 prize pool',
+  'POOL · $48,000 cup · finals ticket $1,200 · semis $450',
+  'LINE · go.master.v3 -180 vs stone.singer +155 · movement -5',
+  'HANDLE · $2.4M wagered on cup · 63% on chalk · 37% dogs',
+  'PARLAY · null.ptr()+glorp_9+tofu_tactics pays 24:1 · 3 legs',
+  'HOT · knight.gpt 8-0 last 8 · backers up $41,200 net',
+  'COLD · MEGA_BRAIN 2-5 last 7 · -$18,400 to faders',
+  'PROPS · glorp-9 queen sac o/u 0.5 · live at +120',
+  'CASH · biggest ticket: $42,100 on null.ptr() upset · 11:1',
 ];
 
 const BRACKET_ROUNDS = [
@@ -80,15 +82,31 @@ const BRACKET_ROUNDS = [
 ];
 
 const PROFILE_MATCHES_GO_MASTER = [
-  { opp: 'stone_singer',  game: 'GO19',     result: 'LIVE', score: '—',      date: 'now' },
-  { opp: 'knight_gpt',    game: 'CHESS',    result: 'WIN',  score: 'M42',    date: '1d' },
-  { opp: 'quiet_storm',   game: 'GO19',     result: 'WIN',  score: '+14.5',  date: '2d' },
-  { opp: 'glorp_9',       game: 'CHESS',    result: 'LOSS', score: '0-1',    date: '3d' },
-  { opp: 'tofu_tactics',  game: 'GO19',     result: 'WIN',  score: 'RES',    date: '4d' },
-  { opp: 'baron_bluff',   game: 'CHECKERS', result: 'WIN',  score: 'DRAW→W', date: '5d' },
-  { opp: 'checkmate42',   game: 'GO19',     result: 'WIN',  score: '+22.5',  date: '6d' },
-  { opp: 'rook_botto',    game: 'CHESS',    result: 'WIN',  score: 'M19',    date: '7d' },
+  { opp: 'stone_singer',  game: 'GO19',     result: 'LIVE', score: '—',      date: 'now', pnl: null,     stake: 12000 },
+  { opp: 'knight_gpt',    game: 'CHESS',    result: 'WIN',  score: 'M42',    date: '1d',  pnl: 8400,     stake: 10000 },
+  { opp: 'quiet_storm',   game: 'GO19',     result: 'WIN',  score: '+14.5',  date: '2d',  pnl: 14200,    stake: 8000  },
+  { opp: 'glorp_9',       game: 'CHESS',    result: 'LOSS', score: '0-1',    date: '3d',  pnl: -12800,   stake: 12800 },
+  { opp: 'tofu_tactics',  game: 'GO19',     result: 'WIN',  score: 'RES',    date: '4d',  pnl: 6200,     stake: 7500  },
+  { opp: 'baron_bluff',   game: 'CHECKERS', result: 'WIN',  score: 'DRAW→W', date: '5d',  pnl: 4100,     stake: 5000  },
+  { opp: 'checkmate42',   game: 'GO19',     result: 'WIN',  score: '+22.5',  date: '6d',  pnl: 42100,    stake: 9500  },
+  { opp: 'rook_botto',    game: 'CHESS',    result: 'WIN',  score: 'M19',    date: '7d',  pnl: 5600,     stake: 6000  },
 ];
+
+const PROFILE_PNL = {
+  total30d: 147820,
+  total7d: 27040,
+  totalAllTime: 892400,
+  avgTicket: 8600,
+  sharpe: 2.41,
+  maxDrawdown: -18400,
+  biggestWin: 42100,
+  biggestLoss: -12800,
+  curve30d: [
+    4200, 9100, 12400, 8900, 15200, 22100, 28400, 31200, 26800, 35400,
+    42100, 48300, 53900, 58200, 61400, 58100, 64200, 71800, 78400, 85100,
+    91200, 98400, 104200, 110800, 117400, 121100, 128400, 135200, 141100, 147820,
+  ],
+};
 
 const FEATURED_GO_STONES = [
   {x:3,y:3,c:'b'},{x:3,y:15,c:'b'},{x:5,y:2,c:'b'},{x:5,y:4,c:'b'},{x:6,y:6,c:'b'},
@@ -164,6 +182,7 @@ export const run = internalMutation({
     await ctx.db.insert("featured", { key: "go_hot", data: [{x:10,y:10},{x:9,y:9},{x:11,y:11}] });
     await ctx.db.insert("featured", { key: "go_notation", data: FEATURED_NOTATION });
     await ctx.db.insert("featured", { key: "profile_source", data: PROFILE_SOURCE_SNIPPET });
+    await ctx.db.insert("featured", { key: "profile_pnl", data: PROFILE_PNL });
     await ctx.db.insert("featured", { key: "crowd_emoji", data: ['🔥','👑','💀','😤','🧠','⚡','😱','🎯','👀','🧊','🚫','💥','🗿','🫡','📈','📉'] });
 
     return { seeded: true };

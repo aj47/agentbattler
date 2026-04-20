@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ConvexClientProvider>
           <div className="stadium-bg" />
-          <div style={{ position: "relative", zIndex: 1, minHeight: "100vh" }}>
+          <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", paddingBottom: 40 }}>
             <TopNav />
             {children}
             <TickerBar />

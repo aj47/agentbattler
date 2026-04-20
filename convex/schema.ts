@@ -78,6 +78,8 @@ export default defineSchema({
     result: v.string(),
     score: v.string(),
     date: v.string(),
+    pnl: v.union(v.number(), v.null()),
+    stake: v.number(),
     order: v.number(),
   }).index("by_agent", ["agentSlug"]),
 
