@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1440" />
+<title>Agent Battler — Vibe Code Cup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/tokens.css" />
+<style>
+  @keyframes rot { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes pulseHot {
+    0% { opacity: 0.8; transform: scale(0.7); transform-origin: center; }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+    15% { opacity: 0.9; }
+    100% { transform: translateY(-320px) scale(1.1); opacity: 0; }
+  }
+  @keyframes chatFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* match-card hover */
+  .match-card { transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out); }
+  .match-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--phos-cyan) !important;
+    box-shadow: 0 0 18px var(--phos-cyan-glow);
+  }
+
+  /* Tweaks panel */
+  .tweaks-panel {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    width: 280px;
+    z-index: 100;
+    background: var(--bg-panel);
+    border: 1px solid var(--phos-cyan);
+    box-shadow: var(--glow-cyan);
+    font-family: var(--font-mono);
+    transform: translateY(0);
+    transition: transform 260ms var(--ease-out), opacity 260ms var(--ease-out);
+  }
+  .tweaks-panel.hidden { transform: translateY(120%); opacity: 0; pointer-events: none; }
+
+  /* Template thumbnail */
+</style>
+
+<!-- Thumbnail for bundler / preview -->
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#05070d"/>
+    <circle cx="50" cy="50" r="26" fill="none" stroke="#5ff0e6" stroke-width="1.2"/>
+    <circle cx="50" cy="50" r="20" fill="none" stroke="#5ff0e6" stroke-width="0.8" opacity="0.6"/>
+    <circle cx="50" cy="50" r="5" fill="#5ff0e6"/>
+    <text x="50" y="80" font-family="monospace" font-size="6" fill="#5ff0e6" text-anchor="middle" letter-spacing="1">AGENT</text>
+  </svg>
+</template>
+</head>
+<body>
+
+<div class="stadium-bg"></div>
+<div id="root"></div>
+
+<!-- Fixed notes: React + Babel pinned with integrity hashes -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="src/data.js"></script>
+<script type="text/babel" src="src/components.jsx"></script>
+<script type="text/babel" src="src/screen_lobby.jsx"></script>
+<script type="text/babel" src="src/screen_match.jsx"></script>
+<script type="text/babel" src="src/screen_bracket.jsx"></script>
+<script type="text/babel" src="src/screen_profile.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+// ==== TWEAKABLE DEFAULTS (editable by host) ====
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "cyan",
+  "showScanlines": true,
+  "crowdIntensity": "normal",
+  "defaultScreen": "lobby"
+}/*EDITMODE-END*/;
+
+function App() {
+  const saved = (() => {
+    try { return JSON.parse(localStorage.getItem('ab_state') || '{}'); } catch { return {}; }
+  })();
+
+  const [screen, setScreen] = React.useState(saved.screen || TWEAK_DEFAULTS.defaultScreen || 'lobby');
+  const [selectedAgent, setSelectedAgent] = React.useState(null);
+  const [selectedMatch, setSelectedMatch] = React.useState(null);
+
+  // Tweaks state
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
+
+  React.useEffect(() => {
+    localStorage.setItem('ab_state', JSON.stringify({ screen }));
+  }, [screen]);
+
+  // Tweak protocol
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type === '__activate_edit_mode') setTweaksOpen(true);
+      if (e.data.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  // apply accent to CSS var
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const map = {
+      cyan: '#5ff0e6', amber: '#ffb547', magenta: '#ff5fb4', green: '#7dff9c', violet: '#9b7dff',
+    };
+    root.style.setProperty('--phos-cyan', map[tweaks.accent] || map.cyan);
+  }, [tweaks.accent]);
+
+  React.useEffect(() => {
+    document.querySelectorAll('.stadium-bg').forEach(el => {
+      el.style.setProperty('--scanline-opacity', tweaks.showScanlines ? '0.35' : '0');
+    });
+    const style = document.getElementById('scanline-override') || (() => {
+      const s = document.createElement('style'); s.id = 'scanline-override'; document.head.appendChild(s); return s;
+    })();
+    style.innerHTML = tweaks.showScanlines ? '' : '.stadium-bg::after { opacity: 0 !important; }';
+  }, [tweaks.showScanlines]);
+
+  const updateTweak = (k, v) => {
+    setTweaks(t => ({ ...t, [k]: v }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*');
+  };
+
+  const renderScreen = () => {
+    switch (screen) {
+      case 'lobby':   return <window.LobbyScreen setScreen={setScreen} setSelectedAgent={setSelectedAgent} setSelectedMatch={setSelectedMatch} />;
+      case 'match':   return <window.MatchScreen match={selectedMatch} setScreen={setScreen} setSelectedAgent={setSelectedAgent} />;
+      case 'bracket': return <window.BracketScreen setScreen={setScreen} setSelectedAgent={setSelectedAgent} />;
+      case 'profile': return <window.ProfileScreen agent={selectedAgent} setScreen={setScreen} setSelectedAgent={setSelectedAgent} setSelectedMatch={setSelectedMatch} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}
+      data-screen-label={`${screen === 'lobby' ? '01 Lobby' : screen === 'match' ? '02 Live Match' : screen === 'bracket' ? '03 Bracket' : '04 Agent Profile'}`}>
+      <window.TopNav screen={screen} setScreen={setScreen} />
+      {renderScreen()}
+      <window.Ticker items={window.TICKER_ITEMS} />
+
+      {/* Tweaks panel */}
+      <div className={`tweaks-panel ${tweaksOpen ? '' : 'hidden'}`}>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="t-label" style={{ color: 'var(--phos-cyan)' }}>◈ TWEAKS</span>
+          <button onClick={() => setTweaksOpen(false)} style={{ color: 'var(--ink-300)', fontSize: 14 }}>×</button>
+        </div>
+        <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <div className="t-label" style={{ fontSize: 9, marginBottom: 6 }}>PRIMARY ACCENT</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['cyan', 'amber', 'magenta', 'green', 'violet'].map(c => (
+                <button key={c} onClick={() => updateTweak('accent', c)}
+                  style={{
+                    flex: 1, padding: '6px 0', fontSize: 9, letterSpacing: '0.1em',
+                    fontFamily: 'var(--font-mono)', textTransform: 'uppercase',
+                    border: `1px solid ${tweaks.accent === c ? `var(--phos-${c})` : 'var(--line-2)'}`,
+                    color: tweaks.accent === c ? `var(--phos-${c})` : 'var(--ink-300)',
+                    background: 'var(--bg-panel-2)',
+                  }}>{c}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-200)' }}>
+              <span className="t-label" style={{ fontSize: 9 }}>CRT SCANLINES</span>
+              <input type="checkbox" checked={tweaks.showScanlines}
+                onChange={e => updateTweak('showScanlines', e.target.checked)} />
+            </label>
+          </div>
+          <div>
+            <div className="t-label" style={{ fontSize: 9, marginBottom: 6 }}>JUMP TO SCREEN</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              {['lobby', 'match', 'bracket', 'profile'].map(s => (
+                <button key={s} onClick={() => setScreen(s)}
+                  style={{
+                    padding: '6px', fontSize: 10, letterSpacing: '0.1em',
+                    fontFamily: 'var(--font-mono)', textTransform: 'uppercase',
+                    border: `1px solid ${screen === s ? 'var(--phos-cyan)' : 'var(--line-2)'}`,
+                    color: screen === s ? 'var(--phos-cyan)' : 'var(--ink-300)',
+                    background: 'var(--bg-panel-2)',
+                  }}>{s}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--ink-400)', fontFamily: 'var(--font-mono)', lineHeight: 1.4 }}>
+            // click any agent to view their dossier. featured match auto-plays with simulated commentary + crowd.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>
