@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../components/boards";
@@ -20,6 +20,8 @@ export default function LobbyPage() {
   const chat = useQuery(api.queries.allChatMessages);
   const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
   const initMatch = useMutation(api.mutations.initMatchState);
+  const sendChatMessage = useMutation(api.mutations.sendChatMessage);
+  const { isAuthenticated } = useConvexAuth();
 
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
@@ -110,6 +112,10 @@ export default function LobbyPage() {
     }
   }, [featured, betAmount, betSide, placeBet]);
 
+  const handleChatSend = useCallback(async (msg: string) => {
+    await sendChatMessage({ msg });
+  }, [sendChatMessage]);
+
   if (!agents || !matches || !leaderboard) {
     return <div className="page-shell" style={{ color: "var(--ink-300)" }}>LOADING…</div>;
   }
@@ -124,6 +130,9 @@ export default function LobbyPage() {
   const winProbW = 100 - winProbB;
   const moveCount = featuredState?.moveCount ?? featured.move;
   const gameLabel = game === "go19" ? "GO 19×19" : game === "chess" ? "CHESS" : "CHECKERS";
+  const chatUserName = currentUser
+    ? ((currentUser as any).name ?? (currentUser as any).email?.split("@")[0] ?? "SPECTATOR")
+    : null;
 
   let boardEl: React.ReactNode;
   if (game === "go19") {
@@ -250,7 +259,13 @@ export default function LobbyPage() {
             style={{ flexShrink: 0, height: 300, display: "flex", flexDirection: "column", overflow: "hidden" }}
           >
             <div style={{ flex: 1, minHeight: 0 }}>
-              <LiveChat messages={(chat as ChatMessage[]) || []} emojis={emojis || []} />
+              <LiveChat
+                messages={(chat as ChatMessage[]) || []}
+                emojis={emojis || []}
+                canSend={isAuthenticated && !!currentUser}
+                currentUserName={chatUserName}
+                onSend={handleChatSend}
+              />
             </div>
           </Panel>
         </div>

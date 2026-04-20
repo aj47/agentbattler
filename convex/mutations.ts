@@ -79,6 +79,36 @@ export const placeBet = mutation({
   },
 });
 
+export const sendChatMessage = mutation({
+  args: { msg: v.string() },
+  handler: async (ctx, { msg }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Must be signed in to chat");
+
+    const text = msg.trim().replace(/\s+/g, " ");
+    if (!text) throw new Error("Message required");
+    if (text.length > 180) throw new Error("Message must be 180 characters or less");
+
+    const user = await ctx.db.get(userId);
+    const profile = user as { name?: string; email?: string } | null;
+    const displayName = (profile?.name?.trim() || profile?.email?.split("@")[0] || "spectator")
+      .replace(/^@+/, "")
+      .slice(0, 24);
+    const now = Date.now();
+
+    return ctx.db.insert("chatMessages", {
+      userId,
+      user: displayName,
+      tier: "sub",
+      msg: text,
+      time: "now",
+      order: -now,
+      source: "human",
+      createdAt: now,
+    });
+  },
+});
+
 export const submitAgent = mutation({
   args: {
     handle: v.string(),

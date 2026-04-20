@@ -102,12 +102,15 @@ export default defineSchema({
   }),
 
   chatMessages: defineTable({
+    userId: v.optional(v.id("users")),
     user: v.string(),
     tier: v.string(),
     msg: v.string(),
     time: v.string(),
     order: v.number(),
-  }),
+    source: v.optional(v.union(v.literal("seed"), v.literal("human"))),
+    createdAt: v.optional(v.number()),
+  }).index("by_order", ["order"]),
 
   tickerItems: defineTable({
     text: v.string(),

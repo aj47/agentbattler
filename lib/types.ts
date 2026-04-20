@@ -36,7 +36,16 @@ export type Highlight = {
   color: string;
 };
 
-export type ChatMessage = { user: string; tier: string; msg: string; time: string };
+export type ChatMessage = {
+  user: string;
+  tier: string;
+  msg: string;
+  time: string;
+  order?: number;
+  userId?: string;
+  source?: "seed" | "human";
+  createdAt?: number;
+};
 
 export type BracketMatch = {
   round: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -21,6 +21,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
   const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
   const initMatch = useMutation(api.mutations.initMatchState);
   const placeBetMutation = useMutation(api.mutations.placeBet);
+  const sendChatMessage = useMutation(api.mutations.sendChatMessage);
   const { isAuthenticated } = useConvexAuth();
   const currentUser = useQuery(api.queries.currentUser);
   const matchBets = useQuery(api.queries.matchBets, { matchSlug: slug });
@@ -57,11 +58,18 @@ export default function MatchPageClient({ slug }: { slug: string }) {
     return () => clearInterval(id);
   }, [emojis]);
 
+  const handleChatSend = useCallback(async (msg: string) => {
+    await sendChatMessage({ msg });
+  }, [sendChatMessage]);
+
   if (!match || !agents) return <div style={{ padding: 40 }}>LOADING…</div>;
   const m = match as Match;
   const a = agentMap.get(m.a);
   const b = agentMap.get(m.b);
   if (!a || !b) return <div style={{ padding: 40 }}>Agent not found.</div>;
+  const chatUserName = currentUser
+    ? ((currentUser as any).name ?? (currentUser as any).email?.split("@")[0] ?? "SPECTATOR")
+    : null;
 
   // Derive board visuals from live state
   const game = m.game;
@@ -518,7 +526,13 @@ export default function MatchPageClient({ slug }: { slug: string }) {
 
         <Panel label="◐ SPECTATOR CHAT" right={<span className="t-label" style={{ fontSize: 9 }}>8,934 ONLINE</span>}
           className="match-chat-panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <LiveChat messages={(chat as ChatMessage[]) || []} emojis={emojis || []} />
+          <LiveChat
+            messages={(chat as ChatMessage[]) || []}
+            emojis={emojis || []}
+            canSend={isAuthenticated && !!currentUser}
+            currentUserName={chatUserName}
+            onSend={handleChatSend}
+          />
         </Panel>
       </div>
     </div>

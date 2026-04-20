@@ -54,8 +54,7 @@ export const allHighlights = query({
 export const allChatMessages = query({
   args: {},
   handler: async (ctx) => {
-    const r = await ctx.db.query("chatMessages").collect();
-    return r.sort((a, b) => a.order - b.order);
+    return await ctx.db.query("chatMessages").withIndex("by_order").order("asc").take(60);
   },
 });
 
