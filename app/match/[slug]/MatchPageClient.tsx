@@ -437,7 +437,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
 
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
               {emojiStream.map(e => (
-                <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: 26, animation: `floatUp ${e.dur}s linear forwards`, filter: "drop-shadow(0 0 4px rgba(0,0,0,0.8))" }}>
+                <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: "clamp(18px, 5vw, 26px)", animation: `floatUp ${e.dur}s linear forwards`, filter: "drop-shadow(0 0 4px rgba(0,0,0,0.8))" }}>
                   {e.e}
                 </span>
               ))}
@@ -448,9 +448,10 @@ export default function MatchPageClient({ slug }: { slug: string }) {
               <span className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>{moveCount}</span>
             </div>
 
-            <div style={{ position: "absolute", top: 16, right: 20, padding: "6px 10px", background: "rgba(5,7,13,0.75)", border: "1px solid var(--line-bright)", display: "flex", gap: 10, alignItems: "center" }}>
-              <span className="t-label" style={{ fontSize: 9 }}>SPECTATORS</span>
-              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 12 }}>{m.viewers.toLocaleString()}</span>
+              <div className="arena-overlay-pill" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span className="t-label" style={{ fontSize: 9 }}>SPECTATORS</span>
+                <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 12 }}>{m.viewers.toLocaleString()}</span>
+              </div>
             </div>
 
             {finished && result && (
@@ -517,7 +518,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         </Panel>
 
         <Panel label="◐ SPECTATOR CHAT" right={<span className="t-label" style={{ fontSize: 9 }}>8,934 ONLINE</span>}
-          style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          className="match-chat-panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <LiveChat messages={(chat as ChatMessage[]) || []} emojis={emojis || []} />
         </Panel>
       </div>

@@ -82,10 +82,10 @@ export default function LobbyPage() {
   };
 
   if (!agents || !matches || !highlights || !leaderboard) {
-    return <div style={{ padding: 40, color: "var(--ink-300)" }}>LOADING…</div>;
+    return <div className="page-shell" style={{ color: "var(--ink-300)" }}>LOADING…</div>;
   }
   if (!featured) {
-    return <div style={{ padding: 40, color: "var(--ink-300)" }}>No matches seeded yet.</div>;
+    return <div className="page-shell" style={{ color: "var(--ink-300)" }}>No matches seeded yet.</div>;
   }
 
   const featA = agentMap.get(featured.a)!;
@@ -113,26 +113,17 @@ export default function LobbyPage() {
   return (
     <div>
       {/* ── ABOVE THE FOLD: featured match fills the viewport ── */}
-      <div style={{
-        height: "calc(100vh - 61px)",
-        display: "grid",
-        gridTemplateColumns: "1fr 300px",
-        gap: 16,
-        padding: "16px 24px",
-        boxSizing: "border-box",
-        minHeight: 600,
-      }}>
+      <div className="page-shell lobby-hero">
 
         {/* Left: featured match panel */}
-        <Panel style={{ display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+        <Panel className="lobby-feature-panel" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {/* Header */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
+          <div className="responsive-toolbar" style={{
             padding: "10px 16px", borderBottom: "1px solid var(--line)", flexShrink: 0,
             background: "linear-gradient(90deg, rgba(95,240,230,0.08), transparent 40%, rgba(255,181,71,0.08))",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <LiveDot />
               <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE · FEATURED</span>
               <span className="t-label">MATCH #{featured.slug.slice(1)}</span>
@@ -141,14 +132,14 @@ export default function LobbyPage() {
               <span className="t-label">·</span>
               <span className="t-label">MOVE {moveCount}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
               <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
               <Link href={`/match/${featured.slug}`} className="btn primary">ENTER ARENA →</Link>
             </div>
           </div>
 
           {/* Win probability */}
-          <div style={{ padding: "10px 20px 6px", flexShrink: 0 }}>
+          <div style={{ padding: "10px clamp(12px, 4vw, 20px) 6px", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
               <span className="t-label">{featA?.handle}</span>
               <span className="t-label">WIN PROBABILITY</span>
@@ -165,25 +156,24 @@ export default function LobbyPage() {
           </div>
 
           {/* Agent cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: "6px 20px", flexShrink: 0 }}>
+          <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
             {featA && <AgentCard agent={featA} side="L" score="B" />}
             {featB && <AgentCard agent={featB} side="R" score="W" />}
           </div>
 
           {/* Stats strip */}
-          <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "4px 20px", flexShrink: 0,
+          <div className="lobby-stats-strip" style={{
+            padding: "6px clamp(12px, 4vw, 20px)", flexShrink: 0,
             borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)",
             background: "rgba(5,7,13,0.4)",
           }}>
-            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)" }}>
+            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", flexWrap: "wrap" }}>
               <span className="t-label" style={{ color: "var(--phos-cyan)" }}>B · BLACK</span>
               <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{featuredState ? (game === "go19" ? (winProbB * 1.8).toFixed(1) : featuredState.capturesB) : "—"}</span></span>
               <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesB ?? 0}</span></span>
             </div>
             <span className="t-label" style={{ color: "var(--ink-400)" }}>{(featuredState?.phase ?? featured.phase).toUpperCase()} · MV {moveCount}</span>
-            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end" }}>
+            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end", flexWrap: "wrap" }}>
               <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesW ?? 0}</span></span>
               <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-amber)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
               <span className="t-label" style={{ color: "var(--phos-amber)" }}>W · WHITE</span>
@@ -200,13 +190,12 @@ export default function LobbyPage() {
         </Panel>
 
         {/* Right sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
+        <div className="stack lobby-sidebar">
           <Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}
-            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ overflowY: "auto", flex: 1 }}>
               {(leaderboard as Agent[]).slice(0, 10).map((a, i) => (
-                <Link key={a._id} href={`/agent/${a.slug}`} style={{
-                  display: "grid", gridTemplateColumns: "24px 1fr auto auto", gap: 8, alignItems: "center",
+                <Link key={a._id} href={`/agent/${a.slug}`} className="leaderboard-row" style={{
                   padding: "7px 12px", borderBottom: i < 9 ? "1px solid var(--line)" : "none",
                 }}>
                   <span className="t-num" style={{ fontSize: 10, color: i < 3 ? "var(--phos-cyan)" : "var(--ink-400)", fontWeight: i < 3 ? 600 : 400 }}>
@@ -243,13 +232,13 @@ export default function LobbyPage() {
       </div>
 
       {/* ── BELOW THE FOLD: other arenas ── */}
-      <div style={{ padding: "24px 24px 20px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
+      <div className="page-shell" style={{ paddingTop: 0 }}>
+        <div className="responsive-toolbar" style={{ alignItems: "baseline", marginBottom: 16 }}>
           <div>
             <div className="t-display" style={{ fontSize: 22 }}>OTHER ARENAS</div>
             <div className="t-label" style={{ marginTop: 2 }}>{others.length} MATCHES IN PROGRESS · SORTED BY HYPE</div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="filter-row">
             <button className="btn">ALL</button>
             <button className="btn">CHESS</button>
             <button className="btn">GO</button>
@@ -257,7 +246,7 @@ export default function LobbyPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+        <div className="match-cards-grid">
           {others.map(m => {
             const a = agentMap.get(m.a)!;
             const b = agentMap.get(m.b)!;

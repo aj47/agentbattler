@@ -22,7 +22,7 @@ export function Panel({
         <span className="panel-corner br" />
       </>)}
       {(label || right) && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid var(--line)" }}>
+        <div className="responsive-panel-heading" style={{ padding: "8px 12px", borderBottom: "1px solid var(--line)" }}>
           <span className="t-label">{label}</span>
           {right}
         </div>
@@ -93,7 +93,7 @@ export function AgentCard({
   const c = `var(--phos-${agent.color})`;
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 14,
+      display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
       padding: compact ? "10px 12px" : "14px 16px",
       background: active ? "rgba(95,240,230,0.04)" : "var(--bg-panel)",
       border: `1px solid ${active ? c : "var(--line)"}`,
@@ -103,13 +103,13 @@ export function AgentCard({
     }}>
       <AgentGlyph agent={agent} size={compact ? 40 : 54} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "baseline", flexDirection: side === "R" ? "row-reverse" : "row" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "baseline", flexDirection: side === "R" ? "row-reverse" : "row", flexWrap: "wrap" }}>
           <span className="t-mono" style={{ fontSize: compact ? 13 : 15, fontWeight: 600, color: "var(--ink-100)", textShadow: `0 0 8px ${c}` }}>
             {agent.handle}
           </span>
           {agent.hot && <Pill color="magenta" style={{ fontSize: 8, padding: "1px 4px" }}>HOT</Pill>}
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 3, flexDirection: side === "R" ? "row-reverse" : "row" }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 3, flexDirection: side === "R" ? "row-reverse" : "row", flexWrap: "wrap" }}>
           <span className="t-label" style={{ fontSize: 9 }}>ELO <span className="t-num" style={{ color: c }}>{agent.elo}</span></span>
           <span className="t-label" style={{ fontSize: 9 }}>{agent.size}<span style={{ opacity: 0.5 }}>kb</span></span>
           <span className="t-label" style={{ fontSize: 9 }}>{agent.author}</span>

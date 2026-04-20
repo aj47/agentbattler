@@ -32,12 +32,11 @@ export default function BracketPage() {
       { p: b, score: m.score.split("-")[1], win: m.winner === m.b },
     ];
     return (
-      <div style={{
+      <div className="bracket-match" style={{
         position: "relative",
         border: `1px solid ${isLive ? "var(--phos-green)" : isUpset ? "var(--phos-magenta)" : "var(--line)"}`,
         background: "var(--bg-panel)",
         boxShadow: isLive ? "0 0 18px rgba(125,255,156,0.2)" : isUpset ? "var(--glow-magenta)" : "none",
-        minWidth: 220,
       }}>
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -84,11 +83,11 @@ export default function BracketPage() {
   }
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1760, margin: "0 auto" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 24, marginBottom: 28 }}>
+    <div className="page-shell">
+      <div className="bracket-summary">
         <div>
           <div className="t-label" style={{ color: "var(--phos-magenta)" }}>SEASON 3 · DOUBLE ELIMINATION</div>
-          <div className="t-display" style={{ fontSize: 56, lineHeight: 1, marginTop: 8, letterSpacing: "-0.03em" }}>
+          <div className="t-display bracket-title">
             VIBE CODE <span style={{ color: "var(--phos-cyan)", textShadow: "var(--glow-cyan)" }}>CUP</span>
           </div>
           <div style={{ marginTop: 10, fontSize: 13, color: "var(--ink-200)", maxWidth: 560 }}>
@@ -96,14 +95,14 @@ export default function BracketPage() {
             Best-of-three series. Prize pool: <span style={{ color: "var(--phos-cyan)" }} className="t-num">$48,000</span>.
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="bracket-stat-grid">
           {[
             { k: "ENTRIES", v: "12", c: "cyan" },
             { k: "ROUND", v: "SEMIS", c: "amber" },
             { k: "NEXT MATCH", v: "2:14", c: "magenta" },
             { k: "UPSETS", v: "3", c: "magenta" },
           ].map((s, i) => (
-            <Panel key={i} style={{ padding: "12px 16px", minWidth: 110 }}>
+            <Panel key={i} style={{ padding: "12px 16px", minWidth: 0 }}>
               <div className="t-label" style={{ fontSize: 9 }}>{s.k}</div>
               <div className="t-num" style={{ fontSize: 22, marginTop: 4, color: `var(--phos-${s.c})`, textShadow: `0 0 10px var(--phos-${s.c}-glow, var(--phos-cyan-glow))` }}>
                 {s.v}
@@ -114,20 +113,20 @@ export default function BracketPage() {
       </div>
 
       <Panel>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${rounds.length + 1}, 1fr)`, gap: 40, padding: "32px 36px", position: "relative" }}>
+        <div className="bracket-grid" style={{ "--round-count": rounds.length + 1 } as React.CSSProperties}>
           {rounds.map((r, ri) => (
-            <div key={ri} style={{ display: "flex", flexDirection: "column", justifyContent: "space-around", gap: 18, position: "relative" }}>
-              <div style={{ position: "absolute", top: -24, left: 0, right: 0, textAlign: "center" }}>
+            <div key={ri} className="bracket-round">
+              <div className="bracket-round-title">
                 <span className="t-label" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>◆ {r.name}</span>
               </div>
               {r.matches.map((m, mi) => <MatchBox key={mi} m={m as BracketMatch} />)}
             </div>
           ))}
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 12 }}>
-            <div style={{ position: "absolute", top: -24, textAlign: "center", right: 0, width: `calc(100% / ${rounds.length + 1})` }}>
+          <div className="champion-card">
+            <div className="champion-title">
               <span className="t-label" style={{ color: "var(--phos-magenta)", fontSize: 11 }}>◆ CHAMPION</span>
             </div>
-            <div style={{ width: 180, height: 180, position: "relative", display: "grid", placeItems: "center" }}>
+            <div className="champion-orb">
               <div style={{ position: "absolute", inset: 0, border: "1px solid var(--phos-magenta)", borderRadius: "50%", animation: "rot 12s linear infinite", clipPath: "polygon(0 0, 70% 0, 70% 10%, 100% 10%, 100% 100%, 0 100%)" }} />
               <div style={{ position: "absolute", inset: 12, border: "1px dashed var(--phos-magenta)", borderRadius: "50%", opacity: 0.4, animation: "rot 18s linear infinite reverse" }} />
               <div style={{ position: "absolute", inset: 20, borderRadius: "50%", background: "radial-gradient(circle, var(--phos-magenta) 0%, transparent 70%)", opacity: 0.3, filter: "blur(8px)" }} />
@@ -139,7 +138,7 @@ export default function BracketPage() {
         </div>
       </Panel>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
+      <div className="bracket-bottom-grid">
         <Panel label="◐ STORY LINES">
           <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, fontSize: 12, lineHeight: 1.5 }}>
             <div><Pill color="magenta">UPSET</Pill> <span style={{ marginLeft: 6, color: "var(--ink-200)" }}>
@@ -165,15 +164,14 @@ export default function BracketPage() {
               { t: "+4:00", m: "glorp-9 vs tofu.tactics", g: "CHECKERS", c: "cyan" },
               { t: "FINAL", m: "??? vs ???", g: "BEST-OF-5", c: "magenta" },
             ].map((s, i) => (
-              <div key={i} style={{
-                display: "grid", gridTemplateColumns: "60px 1fr 80px",
+              <div key={i} className="schedule-row" style={{
                 padding: "10px 14px", gap: 10,
                 borderBottom: i < 3 ? "1px solid var(--line)" : "none",
                 alignItems: "center",
               }}>
                 <span className="t-num" style={{ fontSize: 11, color: `var(--phos-${s.c})` }}>{s.t}</span>
                 <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)" }}>{s.m}</span>
-                <span className="t-label" style={{ fontSize: 9, textAlign: "right" }}>{s.g}</span>
+                <span className="t-label schedule-game" style={{ fontSize: 9, textAlign: "right" }}>{s.g}</span>
               </div>
             ))}
           </div>

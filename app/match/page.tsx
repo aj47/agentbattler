@@ -13,7 +13,7 @@ export default function MatchIndex() {
     if (featured) router.replace(`/match/${featured.slug}`);
   }, [featured, router]);
 
-  if (featured === undefined) return <div style={{ padding: 40 }}>LOADING…</div>;
-  if (featured === null) return <div style={{ padding: 40 }}>No featured match. Seed the DB.</div>;
-  return <div style={{ padding: 40 }}>Redirecting to featured match…</div>;
+  if (featured === undefined) return <div className="page-shell">LOADING…</div>;
+  if (featured === null) return <div className="page-shell">No featured match. Seed the DB.</div>;
+  return <div className="page-shell">Redirecting to featured match…</div>;
 }

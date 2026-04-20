@@ -74,32 +74,28 @@ export default function AgentPageClient({ slug }: { slug: string }) {
   const winrate = Math.round((a.wins / (a.wins + a.loss)) * 100);
 
   return (
-    <div style={{ padding: "20px 28px", maxWidth: 1760, margin: "0 auto" }}>
-      <div style={{ fontSize: 11, color: "var(--ink-300)", marginBottom: 14, fontFamily: "var(--font-mono)" }}>
+    <div className="page-shell">
+      <div className="agent-crumbs">
         <Link href="/">LOBBY</Link>
-        <span style={{ margin: "0 8px", color: "var(--ink-400)" }}>/</span>
+        <span style={{ color: "var(--ink-400)" }}>/</span>
         <Link href="/bracket">BRACKET</Link>
-        <span style={{ margin: "0 8px", color: "var(--ink-400)" }}>/</span>
+        <span style={{ color: "var(--ink-400)" }}>/</span>
         <span style={{ color }}>AGENT · {a.handle}</span>
       </div>
 
       <Panel>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 28, padding: "28px 32px 18px", alignItems: "center", position: "relative", overflow: "hidden" }}>
-          <div style={{
-            position: "absolute", right: -60, top: "50%", transform: "translateY(-50%)",
-            fontSize: 400, fontFamily: "var(--font-display)",
-            color, opacity: 0.05, lineHeight: 0.7, pointerEvents: "none",
-          }}>{a.glyph}</div>
+        <div className="agent-hero-grid">
+          <div className="agent-hero-glyph-bg" style={{ color }}>{a.glyph}</div>
 
           <AgentGlyph agent={a} size={140} />
 
           <div style={{ zIndex: 1 }}>
             <div className="t-label" style={{ color }}>#{rank} GLOBAL · {a.author}</div>
-            <div className="t-display" style={{ fontSize: 48, letterSpacing: "-0.02em", marginTop: 6 }}>{a.handle}</div>
+            <div className="t-display" style={{ fontSize: "clamp(34px, 10vw, 48px)", letterSpacing: "-0.02em", marginTop: 6 }}>{a.handle}</div>
             <div style={{ marginTop: 6, fontSize: 13, color: "var(--ink-200)", maxWidth: 640, fontFamily: "var(--font-mono)" }}>
               <span style={{ color: "var(--ink-400)" }}>{"/* "}</span>{a.bio}<span style={{ color: "var(--ink-400)" }}>{" */"}</span>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <div className="agent-hero-badges">
               {a.hot && <Pill color="magenta">◉ HOT</Pill>}
               {a.streak > 5 && <Pill color="green">W{a.streak} STREAK</Pill>}
               <Pill color="cyan">{a.personality.toUpperCase()}</Pill>
@@ -110,23 +106,23 @@ export default function AgentPageClient({ slug }: { slug: string }) {
 
         {/* Top 4 stat cards */}
         {pnl && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, padding: "0 32px 22px" }}>
-            <div style={{ padding: "14px 16px", border: "1px solid var(--phos-green)", boxShadow: "0 0 18px rgba(107,240,131,0.2)", background: "rgba(12,24,18,0.45)" }}>
+          <div className="agent-stat-grid">
+            <div className="agent-stat-card" style={{ borderColor: "var(--phos-green)", boxShadow: "0 0 18px rgba(107,240,131,0.2)", background: "rgba(12,24,18,0.45)" }}>
               <div className="t-label" style={{ fontSize: 9, color: "var(--phos-green)" }}>NET PNL · 30D</div>
               <div className="t-num" style={{ fontSize: 30, color: "var(--phos-green)", textShadow: "0 0 10px var(--phos-green-glow)" }}>+{fmt$(pnl.total30d)}</div>
               <div className="t-label" style={{ fontSize: 9, color: "var(--ink-300)", marginTop: 3 }}>7D · +{fmt$(pnl.total7d)}</div>
             </div>
-            <div style={{ padding: "14px 16px", border: "1px solid var(--line)" }}>
+            <div className="agent-stat-card">
               <div className="t-label" style={{ fontSize: 9 }}>ALL-TIME</div>
               <div className="t-num" style={{ fontSize: 24, color: "var(--ink-100)" }}>+{fmt$(pnl.totalAllTime)}</div>
               <div className="t-label" style={{ fontSize: 9, color: "var(--ink-300)", marginTop: 3 }}>AVG TICKET · {fmt$(pnl.avgTicket)}</div>
             </div>
-            <div style={{ padding: "14px 16px", border: "1px solid var(--line)" }}>
+            <div className="agent-stat-card">
               <div className="t-label" style={{ fontSize: 9 }}>SHARPE</div>
               <div className="t-num" style={{ fontSize: 24, color: "var(--phos-cyan)" }}>{pnl.sharpe.toFixed(2)}</div>
               <div className="t-label" style={{ fontSize: 9, color: "var(--phos-red)", marginTop: 3 }}>MAX DD · {fmt$(pnl.maxDrawdown)}</div>
             </div>
-            <div style={{ padding: "14px 16px", border: "1px solid var(--line)" }}>
+            <div className="agent-stat-card">
               <div className="t-label" style={{ fontSize: 9 }}>WINRATE · ELO</div>
               <div className="t-num" style={{ fontSize: 24, color }}>{winrate}% · {a.elo}</div>
               <div className="t-label" style={{ fontSize: 9, color: "var(--ink-300)", marginTop: 3 }}>{a.wins}W · {a.loss}L</div>
@@ -140,7 +136,7 @@ export default function AgentPageClient({ slug }: { slug: string }) {
         <Panel
           label="◆ PNL · EQUITY CURVE · LAST 30 DAYS"
           right={
-            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div className="agent-chart-meta">
               <span className="t-label" style={{ fontSize: 9 }}>7D <span className="t-num" style={{ color: "var(--phos-green)", fontSize: 11 }}>+{fmt$(pnl.total7d)}</span></span>
               <span className="t-label" style={{ fontSize: 9 }}>MAX DD <span className="t-num" style={{ color: "var(--phos-red)", fontSize: 11 }}>{fmt$(pnl.maxDrawdown)}</span></span>
               <span className="t-label" style={{ fontSize: 9 }}>AVG TICKET <span className="t-num" style={{ color: "var(--ink-100)", fontSize: 11 }}>{fmt$(pnl.avgTicket)}</span></span>
@@ -151,7 +147,7 @@ export default function AgentPageClient({ slug }: { slug: string }) {
           <div style={{ padding: "16px 20px 10px" }}>
             <PnlChart data={pnl.curve30d} color="var(--phos-green)" />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, padding: "10px 20px 18px", borderTop: "1px solid var(--line)" }}>
+          <div className="agent-chart-stats">
             <div>
               <div className="t-label" style={{ fontSize: 9 }}>BIGGEST WIN</div>
               <div className="t-num" style={{ fontSize: 18, color: "var(--phos-green)" }}>+{fmt$(pnl.biggestWin)}</div>
@@ -169,7 +165,8 @@ export default function AgentPageClient({ slug }: { slug: string }) {
       )}
 
       <Panel label="◼ RECENT MATCHES" right={<button className="btn ghost" style={{ fontSize: 10 }}>VIEW ALL →</button>} style={{ marginTop: 16 }}>
-        <div>
+        <div className="table-scroll">
+          <div className="matches-table">
           <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 90px 90px 110px 70px 80px", padding: "8px 16px", borderBottom: "1px solid var(--line)", background: "var(--bg-panel-2)" }}>
             {["RESULT", "OPPONENT", "GAME", "SCORE", "PNL", "DATE", ""].map(h => (
               <span key={h} className="t-label" style={{ fontSize: 9 }}>{h}</span>
@@ -201,6 +198,7 @@ export default function AgentPageClient({ slug }: { slug: string }) {
               </div>
             );
           })}
+          </div>
         </div>
       </Panel>
     </div>

@@ -11,5 +11,5 @@ export default function AgentIndex() {
     router.replace(`/agent/${DEFAULT_AGENT_SLUG}`);
   }, [router]);
 
-  return <div style={{ padding: 40 }}>Redirecting to featured agent…</div>;
+  return <div className="page-shell">Redirecting to featured agent…</div>;
 }
