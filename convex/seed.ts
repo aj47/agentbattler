@@ -22,13 +22,63 @@ const GAMES = [
 ];
 
 const MATCHES = [
-  { slug: 'm1845', game: 'chess',    a: 'knight_gpt',   b: 'glorp_9',      move: 34,  viewers: 1247, status: 'live',     phase: 'middlegame', winProb: 0.62 },
-  { slug: 'm1846', game: 'checkers', a: 'tofu_tactics', b: 'king_me_v2',   move: 22,  viewers: 412,  status: 'live',     phase: 'endgame',    winProb: 0.81 },
-  { slug: 'm1847', game: 'go19',     a: 'go_master_v3', b: 'stone_singer', move: 127, viewers: 8934, status: 'featured', phase: 'middlegame', winProb: 0.58 },
-  { slug: 'm1848', game: 'chess',    a: 'quiet_storm',  b: 'baron_bluff',  move: 41,  viewers: 3201, status: 'live',     phase: 'endgame',    winProb: 0.73 },
-  { slug: 'm1849', game: 'chess',    a: 'MEGA_BRAIN',   b: 'rook_botto',   move: 18,  viewers: 892,  status: 'live',     phase: 'opening',    winProb: 0.51 },
-  { slug: 'm1850', game: 'checkers', a: 'checkmate42',  b: 'null_pointer', move: 29,  viewers: 227,  status: 'live',     phase: 'middlegame', winProb: 0.44 },
-  { slug: 'm1851', game: 'go19',     a: 'glorp_9',      b: 'tofu_tactics', move: 88,  viewers: 1502, status: 'starting', phase: 'opening',    winProb: 0.50 },
+  { slug: 'm1845', game: 'chess',    a: 'knight_gpt',   b: 'glorp_9',      move: 34,  viewers: 1247, status: 'live',     phase: 'midgame',  winProb: 0.62 },
+  { slug: 'm1846', game: 'checkers', a: 'tofu_tactics', b: 'king_me_v2',   move: 22,  viewers: 412,  status: 'live',     phase: 'endgame',  winProb: 0.81 },
+  { slug: 'm1847', game: 'go19',     a: 'go_master_v3', b: 'stone_singer', move: 127, viewers: 8934, status: 'featured', phase: 'midgame',  winProb: 0.58 },
+  { slug: 'm1848', game: 'chess',    a: 'quiet_storm',  b: 'baron_bluff',  move: 41,  viewers: 3201, status: 'live',     phase: 'endgame',  winProb: 0.73 },
+  { slug: 'm1849', game: 'chess',    a: 'MEGA_BRAIN',   b: 'rook_botto',   move: 18,  viewers: 892,  status: 'live',     phase: 'opening',  winProb: 0.51 },
+  { slug: 'm1850', game: 'checkers', a: 'checkmate42',  b: 'null_pointer', move: 29,  viewers: 227,  status: 'live',     phase: 'midgame',  winProb: 0.44 },
+  { slug: 'm1851', game: 'go19',     a: 'glorp_9',      b: 'tofu_tactics', move: 88,  viewers: 1502, status: 'live',     phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1852', game: 'chess',    a: 'null_pointer', b: 'tofu_tactics', move: 11,  viewers: 674,  status: 'live',     phase: 'opening',  winProb: 0.48 },
+  { slug: 'm1853', game: 'go19',     a: 'knight_gpt',   b: 'quiet_storm',  move: 54,  viewers: 2108, status: 'live',     phase: 'midgame',  winProb: 0.55 },
+  { slug: 'm1854', game: 'checkers', a: 'glorp_9',      b: 'baron_bluff',  move: 17,  viewers: 389,  status: 'live',     phase: 'opening',  winProb: 0.60 },
+  { slug: 'm1855', game: 'chess',    a: 'stone_singer', b: 'MEGA_BRAIN',   move: 62,  viewers: 1834, status: 'live',     phase: 'endgame',  winProb: 0.69 },
+  { slug: 'm1856', game: 'go19',     a: 'tofu_tactics', b: 'rook_botto',   move: 39,  viewers: 721,  status: 'live',     phase: 'opening',  winProb: 0.53 },
+  { slug: 'm1857', game: 'checkers', a: 'king_me_v2',   b: 'knight_gpt',   move: 0,   viewers: 156,  status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1858', game: 'chess',    a: 'quiet_storm',  b: 'go_master_v3', move: 28,  viewers: 4412, status: 'live',     phase: 'midgame',  winProb: 0.47 },
+  { slug: 'm1859', game: 'go19',     a: 'null_pointer', b: 'baron_bluff',  move: 73,  viewers: 918,  status: 'live',     phase: 'midgame',  winProb: 0.56 },
+  { slug: 'm1860', game: 'checkers', a: 'rook_botto',   b: 'stone_singer', move: 0,   viewers: 203,  status: 'starting', phase: 'opening',  winProb: 0.50 },
+  // batch 2 – m1861–m1900
+  { slug: 'm1861', game: 'chess',    a: 'knight_gpt',   b: 'baron_bluff',  move: 8,   viewers: 531,  status: 'live',     phase: 'opening',  winProb: 0.67 },
+  { slug: 'm1862', game: 'go19',     a: 'go_master_v3', b: 'null_pointer', move: 181, viewers: 6721, status: 'live',     phase: 'endgame',  winProb: 0.78 },
+  { slug: 'm1863', game: 'checkers', a: 'tofu_tactics', b: 'rook_botto',   move: 34,  viewers: 298,  status: 'live',     phase: 'midgame',  winProb: 0.54 },
+  { slug: 'm1864', game: 'chess',    a: 'MEGA_BRAIN',   b: 'checkmate42',  move: 44,  viewers: 1122, status: 'live',     phase: 'midgame',  winProb: 0.43 },
+  { slug: 'm1865', game: 'go19',     a: 'stone_singer', b: 'quiet_storm',  move: 66,  viewers: 3309, status: 'live',     phase: 'midgame',  winProb: 0.61 },
+  { slug: 'm1866', game: 'checkers', a: 'null_pointer', b: 'king_me_v2',   move: 12,  viewers: 177,  status: 'live',     phase: 'opening',  winProb: 0.49 },
+  { slug: 'm1867', game: 'chess',    a: 'glorp_9',      b: 'quiet_storm',  move: 19,  viewers: 2204, status: 'live',     phase: 'opening',  winProb: 0.38 },
+  { slug: 'm1868', game: 'go19',     a: 'rook_botto',   b: 'checkmate42',  move: 47,  viewers: 441,  status: 'live',     phase: 'midgame',  winProb: 0.52 },
+  { slug: 'm1869', game: 'checkers', a: 'knight_gpt',   b: 'tofu_tactics', move: 0,   viewers: 189,  status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1870', game: 'chess',    a: 'go_master_v3', b: 'null_pointer', move: 56,  viewers: 3874, status: 'live',     phase: 'midgame',  winProb: 0.72 },
+  { slug: 'm1871', game: 'go19',     a: 'baron_bluff',  b: 'king_me_v2',   move: 103, viewers: 614,  status: 'live',     phase: 'midgame',  winProb: 0.45 },
+  { slug: 'm1872', game: 'checkers', a: 'MEGA_BRAIN',   b: 'glorp_9',      move: 27,  viewers: 562,  status: 'live',     phase: 'midgame',  winProb: 0.57 },
+  { slug: 'm1873', game: 'chess',    a: 'rook_botto',   b: 'stone_singer', move: 31,  viewers: 987,  status: 'live',     phase: 'midgame',  winProb: 0.29 },
+  { slug: 'm1874', game: 'go19',     a: 'knight_gpt',   b: 'go_master_v3', move: 0,   viewers: 5102, status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1875', game: 'checkers', a: 'quiet_storm',  b: 'baron_bluff',  move: 18,  viewers: 344,  status: 'live',     phase: 'opening',  winProb: 0.63 },
+  { slug: 'm1876', game: 'chess',    a: 'tofu_tactics', b: 'king_me_v2',   move: 72,  viewers: 756,  status: 'live',     phase: 'endgame',  winProb: 0.84 },
+  { slug: 'm1877', game: 'go19',     a: 'glorp_9',      b: 'MEGA_BRAIN',   move: 22,  viewers: 1033, status: 'live',     phase: 'opening',  winProb: 0.55 },
+  { slug: 'm1878', game: 'checkers', a: 'stone_singer', b: 'checkmate42',  move: 41,  viewers: 267,  status: 'live',     phase: 'midgame',  winProb: 0.71 },
+  { slug: 'm1879', game: 'chess',    a: 'baron_bluff',  b: 'go_master_v3', move: 14,  viewers: 2891, status: 'live',     phase: 'opening',  winProb: 0.21 },
+  { slug: 'm1880', game: 'go19',     a: 'tofu_tactics', b: 'null_pointer', move: 155, viewers: 1648, status: 'live',     phase: 'endgame',  winProb: 0.66 },
+  { slug: 'm1881', game: 'checkers', a: 'knight_gpt',   b: 'rook_botto',   move: 0,   viewers: 211,  status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1882', game: 'chess',    a: 'quiet_storm',  b: 'checkmate42',  move: 88,  viewers: 1399, status: 'live',     phase: 'endgame',  winProb: 0.91 },
+  { slug: 'm1883', game: 'go19',     a: 'stone_singer', b: 'baron_bluff',  move: 34,  viewers: 722,  status: 'live',     phase: 'opening',  winProb: 0.59 },
+  { slug: 'm1884', game: 'checkers', a: 'go_master_v3', b: 'glorp_9',      move: 23,  viewers: 1844, status: 'live',     phase: 'midgame',  winProb: 0.53 },
+  { slug: 'm1885', game: 'chess',    a: 'null_pointer', b: 'MEGA_BRAIN',   move: 37,  viewers: 633,  status: 'live',     phase: 'midgame',  winProb: 0.46 },
+  { slug: 'm1886', game: 'go19',     a: 'king_me_v2',   b: 'rook_botto',   move: 78,  viewers: 388,  status: 'live',     phase: 'midgame',  winProb: 0.48 },
+  { slug: 'm1887', game: 'checkers', a: 'tofu_tactics', b: 'baron_bluff',  move: 0,   viewers: 155,  status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1888', game: 'chess',    a: 'glorp_9',      b: 'checkmate42',  move: 21,  viewers: 817,  status: 'live',     phase: 'opening',  winProb: 0.62 },
+  { slug: 'm1889', game: 'go19',     a: 'quiet_storm',  b: 'king_me_v2',   move: 112, viewers: 2437, status: 'live',     phase: 'endgame',  winProb: 0.77 },
+  { slug: 'm1890', game: 'checkers', a: 'knight_gpt',   b: 'null_pointer', move: 9,   viewers: 492,  status: 'live',     phase: 'opening',  winProb: 0.58 },
+  { slug: 'm1891', game: 'chess',    a: 'stone_singer', b: 'rook_botto',   move: 53,  viewers: 1066, status: 'live',     phase: 'midgame',  winProb: 0.74 },
+  { slug: 'm1892', game: 'go19',     a: 'baron_bluff',  b: 'MEGA_BRAIN',   move: 0,   viewers: 308,  status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1893', game: 'checkers', a: 'go_master_v3', b: 'checkmate42',  move: 16,  viewers: 934,  status: 'live',     phase: 'opening',  winProb: 0.68 },
+  { slug: 'm1894', game: 'chess',    a: 'king_me_v2',   b: 'tofu_tactics', move: 67,  viewers: 588,  status: 'live',     phase: 'endgame',  winProb: 0.35 },
+  { slug: 'm1895', game: 'go19',     a: 'glorp_9',      b: 'stone_singer', move: 91,  viewers: 2013, status: 'live',     phase: 'midgame',  winProb: 0.44 },
+  { slug: 'm1896', game: 'checkers', a: 'null_pointer', b: 'quiet_storm',  move: 33,  viewers: 719,  status: 'live',     phase: 'midgame',  winProb: 0.31 },
+  { slug: 'm1897', game: 'chess',    a: 'MEGA_BRAIN',   b: 'knight_gpt',   move: 0,   viewers: 1402, status: 'starting', phase: 'opening',  winProb: 0.50 },
+  { slug: 'm1898', game: 'go19',     a: 'rook_botto',   b: 'go_master_v3', move: 44,  viewers: 4887, status: 'live',     phase: 'midgame',  winProb: 0.17 },
+  { slug: 'm1899', game: 'checkers', a: 'baron_bluff',  b: 'stone_singer', move: 20,  viewers: 411,  status: 'live',     phase: 'opening',  winProb: 0.40 },
+  { slug: 'm1900', game: 'chess',    a: 'checkmate42',  b: 'glorp_9',      move: 45,  viewers: 1176, status: 'live',     phase: 'midgame',  winProb: 0.53 },
 ];
 
 const HIGHLIGHTS = [
@@ -151,7 +201,7 @@ export const run = internalMutation({
   args: {},
   handler: async (ctx) => {
     // clear
-    for (const t of ["agents","games","matches","highlights","chatMessages","tickerItems","bracketMatches","profileMatches","featured","submissions"] as const) {
+    for (const t of ["agents","games","matches","matchStates","highlights","chatMessages","tickerItems","bracketMatches","profileMatches","featured","submissions"] as const) {
       const rows = await ctx.db.query(t).collect();
       for (const r of rows) await ctx.db.delete(r._id);
     }

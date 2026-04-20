@@ -142,6 +142,18 @@ export const allMatchStates = query({
   handler: async (ctx) => ctx.db.query("matchStates").collect(),
 });
 
+export const matchBets = query({
+  args: { matchSlug: v.string() },
+  handler: async (ctx, { matchSlug }) => {
+    const bets = await ctx.db.query("bets").withIndex("by_match", q => q.eq("matchSlug", matchSlug)).collect();
+    const poolA = bets.filter(b => b.side === "a").reduce((s, b) => s + b.amount, 0);
+    const poolB = bets.filter(b => b.side === "b").reduce((s, b) => s + b.amount, 0);
+    const userId = await getAuthUserId(ctx);
+    const myBets = userId ? bets.filter(b => b.userId === userId) : [];
+    return { poolA, poolB, total: poolA + poolB, count: bets.length, myBets };
+  },
+});
+
 export const bootstrap = query({
   args: {},
   handler: async (ctx) => {
