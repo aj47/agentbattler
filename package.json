@@ -12,6 +12,8 @@
     "deploy:pages": "wrangler pages deploy out --project-name agentbattler"
   },
   "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.91",
     "convex": "^1.17.0",
     "next": "^15.1.0",
     "react": "^19.0.0",

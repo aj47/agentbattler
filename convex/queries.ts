@@ -1,4 +1,5 @@
 import { query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 export const allAgents = query({
@@ -95,6 +96,45 @@ export const featuredData = query({
     const r = await ctx.db.query("featured").withIndex("by_key", q => q.eq("key", key)).first();
     return r?.data ?? null;
   },
+});
+
+export const currentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+    const wallet = await ctx.db.query("wallets").withIndex("by_user", q => q.eq("userId", userId)).first();
+    return { ...user, balance: wallet?.balance ?? 0 };
+  },
+});
+
+export const myBets = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const bets = await ctx.db.query("bets").withIndex("by_user", q => q.eq("userId", userId)).collect();
+    return bets.sort((a, b) => b.placedAt.localeCompare(a.placedAt));
+  },
+});
+
+export const allSubmissions = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("submissions").collect();
+    return rows.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+  },
+});
+
+export const matchState = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) =>
+    ctx.db
+      .query("matchStates")
+      .withIndex("by_slug", q => q.eq("matchSlug", slug))
+      .first(),
 });
 
 export const bootstrap = query({
