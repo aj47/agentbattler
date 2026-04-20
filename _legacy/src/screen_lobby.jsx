@@ -62,23 +62,43 @@ function LobbyScreen({ setScreen, setSelectedAgent, setSelectedMatch }) {
             </div>
           </div>
 
+          {/* win-prob bar — top of featured match */}
+          <div style={{ padding: '14px 24px 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+              <span className="t-label" style={{ color: 'var(--phos-cyan)' }}>{featA.handle} · 58%</span>
+              <span className="t-label">WIN PROBABILITY</span>
+              <span className="t-label" style={{ color: 'var(--phos-amber)' }}>42% · {featB.handle}</span>
+            </div>
+            <div style={{ display: 'flex', height: 6, background: 'var(--bg-void)', border: '1px solid var(--line)' }}>
+              <div style={{ width: '58%', background: 'var(--phos-cyan)', boxShadow: '0 0 12px var(--phos-cyan-glow)' }} />
+              <div style={{ width: '42%', background: 'var(--phos-amber)', boxShadow: '0 0 12px var(--phos-amber-glow)' }} />
+            </div>
+          </div>
+
+          {/* Agents row — above the board, per drawing */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr auto 1fr',
-            gap: 20, padding: '24px 24px 20px',
-            alignItems: 'center',
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            gap: 16, padding: '16px 24px 0',
           }}>
-            {/* Left agent */}
-            <div>
-              <window.AgentCard agent={featA} side="L" score="B" />
-              <div style={{ padding: '10px 14px 0', fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--ink-300)' }}>
-                <div>TERRITORY <span className="t-num" style={{ color: 'var(--phos-cyan)', fontSize: 14 }}>58.5</span></div>
-                <div style={{ marginTop: 4 }}>CAPTURES <span className="t-num" style={{ color: 'var(--ink-100)' }}>12</span></div>
-                <div style={{ marginTop: 4 }}>TIME <span className="t-num" style={{ color: 'var(--ink-100)' }}>4:12</span></div>
-              </div>
+            <window.AgentCard agent={featA} side="L" score="B" />
+            <window.AgentCard agent={featB} side="R" score="W" />
+          </div>
+
+          <div style={{
+            display: 'grid', gridTemplateColumns: '200px 1fr 220px',
+            gap: 20, padding: '18px 24px 24px',
+            alignItems: 'start',
+          }}>
+            {/* Left stats column */}
+            <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--ink-300)', paddingTop: 40 }}>
+              <div className="t-label" style={{ fontSize: 9, color: 'var(--phos-cyan)' }}>B · BLACK</div>
+              <div style={{ marginTop: 10 }}>TERRITORY <span className="t-num" style={{ color: 'var(--phos-cyan)', fontSize: 18, display: 'block', marginTop: 2 }}>58.5</span></div>
+              <div style={{ marginTop: 10 }}>CAPTURES <span className="t-num" style={{ color: 'var(--ink-100)', fontSize: 14, display: 'block', marginTop: 2 }}>12</span></div>
+              <div style={{ marginTop: 10 }}>TIME <span className="t-num" style={{ color: 'var(--ink-100)', fontSize: 14, display: 'block', marginTop: 2 }}>4:12</span></div>
             </div>
 
             {/* Center: hologram board */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
               <window.HoloBoardGo
                 stones={window.FEATURED_GO_STONES}
                 lastMove={window.FEATURED_LAST_MOVE}
@@ -86,7 +106,6 @@ function LobbyScreen({ setScreen, setSelectedAgent, setSelectedMatch }) {
                 size={460}
                 tilt={40}
               />
-              {/* floating emoji spam */}
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
                 {emojiStream.map(e => (
                   <span key={e.id} style={{
@@ -99,31 +118,50 @@ function LobbyScreen({ setScreen, setSelectedAgent, setSelectedMatch }) {
               </div>
             </div>
 
-            {/* Right agent */}
+            {/* Right stats + CUP popover */}
             <div>
-              <window.AgentCard agent={featB} side="R" score="W" />
-              <div style={{ padding: '10px 14px 0', fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--ink-300)', textAlign: 'right' }}>
-                <div>TERRITORY <span className="t-num" style={{ color: 'var(--phos-amber)', fontSize: 14 }}>47.0</span></div>
-                <div style={{ marginTop: 4 }}>CAPTURES <span className="t-num" style={{ color: 'var(--ink-100)' }}>8</span></div>
-                <div style={{ marginTop: 4 }}>TIME <span className="t-num" style={{ color: 'var(--ink-100)' }}>3:48</span></div>
+              <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--ink-300)', textAlign: 'right' }}>
+                <div className="t-label" style={{ fontSize: 9, color: 'var(--phos-amber)' }}>W · WHITE</div>
+                <div style={{ marginTop: 10 }}>TERRITORY <span className="t-num" style={{ color: 'var(--phos-amber)', fontSize: 18, display: 'block', marginTop: 2 }}>47.0</span></div>
+                <div style={{ marginTop: 10 }}>CAPTURES <span className="t-num" style={{ color: 'var(--ink-100)', fontSize: 14, display: 'block', marginTop: 2 }}>8</span></div>
+                <div style={{ marginTop: 10 }}>TIME <span className="t-num" style={{ color: 'var(--ink-100)', fontSize: 14, display: 'block', marginTop: 2 }}>3:48</span></div>
               </div>
-            </div>
-          </div>
 
-          {/* win-prob bar */}
-          <div style={{ padding: '0 24px 18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-              <span className="t-label">{featA.handle}</span>
-              <span className="t-label">WIN PROBABILITY</span>
-              <span className="t-label">{featB.handle}</span>
-            </div>
-            <div style={{ display: 'flex', height: 6, background: 'var(--bg-void)', border: '1px solid var(--line)' }}>
-              <div style={{ width: '58%', background: 'var(--phos-cyan)', boxShadow: '0 0 12px var(--phos-cyan-glow)' }} />
-              <div style={{ width: '42%', background: 'var(--phos-amber)', boxShadow: '0 0 12px var(--phos-amber-glow)' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-              <span className="t-num" style={{ color: 'var(--phos-cyan)', fontSize: 11 }}>58%</span>
-              <span className="t-num" style={{ color: 'var(--phos-amber)', fontSize: 11 }}>42%</span>
+              {/* CUP popover — out of board, below stats */}
+              <div style={{
+                marginTop: 18,
+                background: 'linear-gradient(180deg, rgba(15,20,34,0.95), rgba(19,26,43,0.95))',
+                border: '1px solid var(--phos-magenta)',
+                boxShadow: 'var(--glow-magenta)',
+                padding: '10px 12px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span className="t-label" style={{ fontSize: 9, color: 'var(--phos-magenta)' }}>◈ CUP S3</span>
+                  <window.Pill color="magenta" style={{ fontSize: 7, padding: '1px 3px' }}>LIVE</window.Pill>
+                </div>
+                <div className="t-display" style={{ fontSize: 22, color: 'var(--phos-cyan)', textShadow: 'var(--glow-cyan)', lineHeight: 1 }}>
+                  $48,000
+                </div>
+                <div className="t-label" style={{ fontSize: 8, marginTop: 2, color: 'var(--ink-300)' }}>PRIZE · 6 LEFT</div>
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                    <span className="t-mono" style={{ color: 'var(--ink-300)' }}>QUARTERS</span>
+                    <span style={{ color: 'var(--phos-green)', fontFamily: 'var(--font-mono)', fontSize: 9 }}>DONE</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                    <span className="t-mono" style={{ color: 'var(--ink-100)' }}>SEMIS</span>
+                    <span style={{ color: 'var(--phos-amber)', fontFamily: 'var(--font-mono)', fontSize: 9 }}>● LIVE</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                    <span className="t-mono" style={{ color: 'var(--ink-300)' }}>FINAL</span>
+                    <span className="t-num" style={{ color: 'var(--ink-200)', fontSize: 9 }}>2:14:08</span>
+                  </div>
+                </div>
+                <button className="btn primary" style={{ width: '100%', marginTop: 10, padding: '5px 8px', fontSize: 9, justifyContent: 'center' }}
+                  onClick={() => setScreen('bracket')}>
+                  VIEW BRACKET →
+                </button>
+              </div>
             </div>
           </div>
         </window.Panel>
@@ -199,30 +237,6 @@ function LobbyScreen({ setScreen, setSelectedAgent, setSelectedMatch }) {
       {/* ==== RIGHT: leaderboard + upsets ==== */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* HIGHLIGHTS */}
-        <window.Panel label="◆ UPSETS & HIGHLIGHTS">
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {window.HIGHLIGHTS.map((h, i) => (
-              <div key={i} style={{
-                padding: '12px 14px',
-                borderBottom: i < window.HIGHLIGHTS.length - 1 ? '1px solid var(--line)' : 'none',
-                cursor: 'pointer',
-                transition: 'background 120ms',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-panel-3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <window.Pill color={h.color}>{h.tag}</window.Pill>
-                  <span className="t-label" style={{ fontSize: 9 }}>{h.when}</span>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--ink-100)', lineHeight: 1.3 }}>{h.title}</div>
-                <div className="t-num" style={{ fontSize: 10, color: `var(--phos-${h.color})`, marginTop: 3 }}>{h.delta}</div>
-              </div>
-            ))}
-          </div>
-        </window.Panel>
-
         {/* LEADERBOARD */}
         <window.Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}>
           <div>
@@ -259,31 +273,27 @@ function LobbyScreen({ setScreen, setSelectedAgent, setSelectedMatch }) {
           </div>
         </window.Panel>
 
-        {/* CUP TEASE */}
-        <window.Panel label="◈ VIBE CODE CUP S3" right={<window.Pill color="magenta">LIVE</window.Pill>}>
-          <div style={{ padding: '14px' }}>
-            <div className="t-display" style={{ fontSize: 28, color: 'var(--phos-cyan)', textShadow: 'var(--glow-cyan)' }}>
-              $48,000
-            </div>
-            <div className="t-label" style={{ marginTop: 2 }}>PRIZE POOL · 6 AGENTS LEFT</div>
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                <span className="t-mono">QUARTERFINALS</span>
-                <span style={{ color: 'var(--phos-green)' }}>COMPLETE</span>
+        {/* HIGHLIGHTS */}
+        <window.Panel label="◆ UPSETS & HIGHLIGHTS">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {window.HIGHLIGHTS.map((h, i) => (
+              <div key={i} style={{
+                padding: '12px 14px',
+                borderBottom: i < window.HIGHLIGHTS.length - 1 ? '1px solid var(--line)' : 'none',
+                cursor: 'pointer',
+                transition: 'background 120ms',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-panel-3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <window.Pill color={h.color}>{h.tag}</window.Pill>
+                  <span className="t-label" style={{ fontSize: 9 }}>{h.when}</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-100)', lineHeight: 1.3 }}>{h.title}</div>
+                <div className="t-num" style={{ fontSize: 10, color: `var(--phos-${h.color})`, marginTop: 3 }}>{h.delta}</div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                <span className="t-mono">SEMIFINALS</span>
-                <span style={{ color: 'var(--phos-amber)' }}>LIVE NOW</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                <span className="t-mono">GRAND FINAL</span>
-                <span className="t-num" style={{ color: 'var(--ink-300)' }}>2:14:08</span>
-              </div>
-            </div>
-            <button className="btn primary" style={{ width: '100%', marginTop: 14, justifyContent: 'center' }}
-              onClick={() => setScreen('bracket')}>
-              VIEW BRACKET →
-            </button>
+            ))}
           </div>
         </window.Panel>
       </div>

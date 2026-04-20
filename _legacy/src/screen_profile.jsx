@@ -55,14 +55,17 @@ function ProfileScreen({ agent, setScreen, setSelectedMatch, setSelectedAgent })
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, zIndex: 1 }}>
             {[
-              { k: 'ELO', v: a.elo, c: color },
-              { k: 'WINRATE', v: winrate + '%', c: 'var(--phos-green)' },
-              { k: 'WINS', v: a.wins, c: 'var(--ink-100)' },
-              { k: 'LOSSES', v: a.loss, c: 'var(--ink-100)' },
+              { k: 'NET PNL · 30D', v: '+$' + (window.PROFILE_PNL.total30d/1000).toFixed(1) + 'k', c: 'var(--phos-green)', glow: true },
+              { k: 'ALL-TIME', v: '$' + (window.PROFILE_PNL.totalAllTime/1000).toFixed(0) + 'k', c: 'var(--phos-cyan)' },
+              { k: 'SHARPE', v: window.PROFILE_PNL.sharpe.toFixed(2), c: color },
+              { k: 'WINRATE · ELO', v: winrate + '% · ' + a.elo, c: 'var(--ink-100)' },
             ].map((s, i) => (
-              <div key={i} style={{ padding: '10px 14px', border: '1px solid var(--line)', minWidth: 110 }}>
+              <div key={i} style={{ padding: '10px 14px', border: '1px solid var(--line)', minWidth: 140 }}>
                 <div className="t-label" style={{ fontSize: 9 }}>{s.k}</div>
-                <div className="t-num" style={{ fontSize: 22, color: s.c, textShadow: i === 0 ? `0 0 10px ${color}` : 'none' }}>{s.v}</div>
+                <div className="t-num" style={{
+                  fontSize: 22, color: s.c,
+                  textShadow: s.glow ? `0 0 10px ${s.c}` : 'none',
+                }}>{s.v}</div>
               </div>
             ))}
           </div>
@@ -80,107 +83,37 @@ function ProfileScreen({ agent, setScreen, setSelectedMatch, setSelectedAgent })
         </div>
       </window.Panel>
 
-      {/* 3-column content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 16, marginTop: 16 }}>
+      {/* PnL equity curve — full-width */}
+      <window.Panel label="◆ PNL · EQUITY CURVE · LAST 30 DAYS" right={
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <span className="t-label" style={{ fontSize: 9 }}>7D <span className="t-num" style={{ color: 'var(--phos-green)', marginLeft: 4 }}>+${(window.PROFILE_PNL.total7d/1000).toFixed(1)}k</span></span>
+          <span className="t-label" style={{ fontSize: 9 }}>MAX DD <span className="t-num" style={{ color: 'var(--phos-red)', marginLeft: 4 }}>${(window.PROFILE_PNL.maxDrawdown/1000).toFixed(1)}k</span></span>
+          <span className="t-label" style={{ fontSize: 9 }}>AVG TICKET <span className="t-num" style={{ color: 'var(--ink-200)', marginLeft: 4 }}>${(window.PROFILE_PNL.avgTicket/1000).toFixed(1)}k</span></span>
+        </div>
+      } style={{ marginTop: 16 }}>
+        <PnLChart curve={window.PROFILE_PNL.curve30d} color={color} />
+      </window.Panel>
 
-        {/* Source snippet */}
-        <window.Panel label="◂ SOURCE · MAIN.JS" right={<span className="t-label" style={{ fontSize: 9, color: 'var(--phos-cyan)' }}>READ-ONLY</span>}>
-          <pre style={{
-            padding: '14px 16px', fontSize: 11, lineHeight: 1.55,
-            fontFamily: 'var(--font-mono)', color: 'var(--ink-200)',
-            background: 'var(--bg-void)', overflow: 'auto', maxHeight: 380,
-            whiteSpace: 'pre-wrap',
-          }}>{window.PROFILE_SOURCE_SNIPPET.split('\n').map((line, i) => {
-            let c = 'var(--ink-200)';
-            if (line.startsWith('//')) c = 'var(--ink-400)';
-            else if (line.includes('export') || line.includes('return') || line.includes('const')) c = 'var(--phos-magenta)';
-            else if (line.includes('function') || line.includes('act')) c = 'var(--phos-cyan)';
-            return <div key={i} style={{ color: c, display: 'flex' }}>
-              <span style={{ color: 'var(--ink-500)', width: 28, textAlign: 'right', marginRight: 12, userSelect: 'none' }}>{i + 1}</span>
-              <span style={{ flex: 1 }}>{line}</span>
-            </div>;
-          })}</pre>
-        </window.Panel>
-
-        {/* ELO graph (sparkline) */}
-        <window.Panel label="◆ ELO · LAST 30 DAYS">
-          <div style={{ padding: '18px 16px' }}>
-            <div style={{ position: 'relative', height: 140 }}>
-              <svg width="100%" height="100%" viewBox="0 0 300 140" preserveAspectRatio="none">
-                {/* grid */}
-                {[0, 1, 2, 3, 4].map(i => (
-                  <line key={i} x1="0" y1={i * 35} x2="300" y2={i * 35} stroke="var(--line)" strokeWidth="0.5" />
-                ))}
-                {/* area */}
-                <path d="M 0 90 L 20 80 L 40 82 L 60 70 L 80 75 L 100 62 L 120 55 L 140 60 L 160 45 L 180 50 L 200 40 L 220 35 L 240 30 L 260 32 L 280 22 L 300 18 L 300 140 L 0 140 Z"
-                  fill={color} opacity="0.15" />
-                <path d="M 0 90 L 20 80 L 40 82 L 60 70 L 80 75 L 100 62 L 120 55 L 140 60 L 160 45 L 180 50 L 200 40 L 220 35 L 240 30 L 260 32 L 280 22 L 300 18"
-                  fill="none" stroke={color} strokeWidth="1.4" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
-                <circle cx="300" cy="18" r="4" fill={color} />
-                <circle cx="300" cy="18" r="8" fill="none" stroke={color} strokeWidth="1" opacity="0.5">
-                  <animate attributeName="r" from="4" to="12" dur="1.4s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" from="0.8" to="0" dur="1.4s" repeatCount="indefinite" />
-                </circle>
-              </svg>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-              <div>
-                <div className="t-label" style={{ fontSize: 9 }}>30D AGO</div>
-                <div className="t-num" style={{ fontSize: 15, color: 'var(--ink-300)' }}>2,754</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div className="t-label" style={{ fontSize: 9 }}>NOW · Δ</div>
-                <div className="t-num" style={{ fontSize: 15, color: 'var(--phos-green)' }}>+{a.elo - 2754}</div>
-              </div>
-            </div>
-          </div>
-        </window.Panel>
-
-        {/* Preferred openings / quirks */}
-        <window.Panel label="◇ TACTICAL DOSSIER">
-          <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>FAVORITE OPENING</div>
-              <div className="t-mono" style={{ fontSize: 13, color: 'var(--ink-100)', marginTop: 3 }}>4-4 / 3-4 Influence</div>
-              <div className="t-label" style={{ fontSize: 9, color: 'var(--ink-400)', marginTop: 2 }}>USED IN 68% OF GAMES</div>
-            </div>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>SIGNATURE MOVE</div>
-              <div className="t-mono" style={{ fontSize: 13, color: color, marginTop: 3, textShadow: `0 0 6px ${color}` }}>3-3 INVASION (MOVE 28-42)</div>
-              <div className="t-label" style={{ fontSize: 9, color: 'var(--ink-400)', marginTop: 2 }}>88% SUCCESS RATE</div>
-            </div>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>WEAKNESS</div>
-              <div className="t-mono" style={{ fontSize: 13, color: 'var(--phos-red)', marginTop: 3 }}>KO FIGHTS · 51% WIN</div>
-              <div className="t-label" style={{ fontSize: 9, color: 'var(--ink-400)', marginTop: 2 }}>OPPONENTS BAIT THIS OFTEN</div>
-            </div>
-            <div>
-              <div className="t-label" style={{ fontSize: 9 }}>QUIRK</div>
-              <div className="t-mono" style={{ fontSize: 13, color: 'var(--ink-200)', marginTop: 3 }}>NEVER TENUKIS EARLY</div>
-              <div className="t-label" style={{ fontSize: 9, color: 'var(--ink-400)', marginTop: 2 }}>0 TENUKI IN FIRST 20 MOVES</div>
-            </div>
-          </div>
-        </window.Panel>
-      </div>
-
-      {/* Match history */}
+      {/* Match history — brought up, now with PnL */}
       <window.Panel label="◼ RECENT MATCHES" right={<button className="btn ghost" style={{ fontSize: 10 }}>VIEW ALL →</button>} style={{ marginTop: 16 }}>
         <div>
           <div style={{
-            display: 'grid', gridTemplateColumns: '100px 1fr 100px 100px 80px 80px',
+            display: 'grid', gridTemplateColumns: '90px 1fr 90px 90px 110px 70px 80px',
             padding: '8px 16px', borderBottom: '1px solid var(--line)',
             background: 'var(--bg-panel-2)',
           }}>
-            {['RESULT', 'OPPONENT', 'GAME', 'SCORE', 'DATE', ''].map(h => (
+            {['RESULT', 'OPPONENT', 'GAME', 'SCORE', 'PNL', 'DATE', ''].map(h => (
               <span key={h} className="t-label" style={{ fontSize: 9 }}>{h}</span>
             ))}
           </div>
           {window.PROFILE_MATCHES.map((m, i) => {
             const opp = window.agentById(m.opp);
             const rc = m.result === 'WIN' ? 'var(--phos-green)' : m.result === 'LOSS' ? 'var(--phos-red)' : 'var(--phos-cyan)';
+            const pnlColor = m.pnl == null ? 'var(--ink-400)' : m.pnl > 0 ? 'var(--phos-green)' : 'var(--phos-red)';
+            const pnlLabel = m.pnl == null ? '—' : (m.pnl > 0 ? '+' : '') + '$' + Math.abs(m.pnl).toLocaleString();
             return (
               <div key={i} style={{
-                display: 'grid', gridTemplateColumns: '100px 1fr 100px 100px 80px 80px',
+                display: 'grid', gridTemplateColumns: '90px 1fr 90px 90px 110px 70px 80px',
                 padding: '10px 16px',
                 borderBottom: i < window.PROFILE_MATCHES.length - 1 ? '1px solid var(--line)' : 'none',
                 alignItems: 'center',
@@ -200,6 +133,10 @@ function ProfileScreen({ agent, setScreen, setSelectedMatch, setSelectedAgent })
                 </div>
                 <span className="t-label" style={{ fontSize: 10, color: 'var(--phos-cyan)' }}>{m.game}</span>
                 <span className="t-num" style={{ fontSize: 11, color: 'var(--ink-200)' }}>{m.score}</span>
+                <span className="t-num" style={{
+                  fontSize: 13, color: pnlColor, fontWeight: 600,
+                  textShadow: m.pnl != null ? `0 0 6px ${pnlColor}` : 'none',
+                }}>{pnlLabel}</span>
                 <span className="t-label" style={{ fontSize: 9 }}>{m.date}</span>
                 <button className="btn ghost" style={{ fontSize: 9, padding: '4px 8px' }}>REPLAY</button>
               </div>
@@ -207,6 +144,69 @@ function ProfileScreen({ agent, setScreen, setSelectedMatch, setSelectedAgent })
           })}
         </div>
       </window.Panel>
+    </div>
+  );
+}
+
+// PnL equity curve chart
+function PnLChart({ curve, color }) {
+  const W = 1200, H = 220;
+  const max = Math.max(...curve);
+  const min = Math.min(...curve, 0);
+  const range = max - min || 1;
+  const pad = 24;
+  const xStep = (W - pad * 2) / (curve.length - 1);
+  const y = (v) => pad + (H - pad * 2) * (1 - (v - min) / range);
+  const zeroY = y(0);
+
+  const pts = curve.map((v, i) => [pad + i * xStep, y(v)]);
+  const path = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const area = path + ` L ${pts[pts.length-1][0]} ${zeroY} L ${pad} ${zeroY} Z`;
+
+  // horizontal grid lines at $0, $50k, $100k, $150k
+  const grids = [];
+  for (let v = 0; v <= max; v += 50000) grids.push(v);
+
+  return (
+    <div style={{ padding: '18px 20px' }}>
+      <div style={{ position: 'relative' }}>
+        <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+          <defs>
+            <linearGradient id="pnlArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* grid */}
+          {grids.map((v, i) => (
+            <g key={i}>
+              <line x1={pad} y1={y(v)} x2={W - pad} y2={y(v)}
+                stroke={v === 0 ? 'var(--line-2)' : 'var(--line)'}
+                strokeWidth={v === 0 ? 0.8 : 0.4}
+                strokeDasharray={v === 0 ? '0' : '3 4'} />
+              <text x={W - pad + 4} y={y(v) + 3} fill="var(--ink-400)"
+                fontSize="9" fontFamily="var(--font-mono)">${v/1000}k</text>
+            </g>
+          ))}
+          {/* area */}
+          <path d={area} fill="url(#pnlArea)" />
+          {/* line */}
+          <path d={path} fill="none" stroke={color} strokeWidth="1.6"
+            style={{ filter: `drop-shadow(0 0 5px ${color})` }} />
+          {/* last-point pulse */}
+          <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r="5" fill={color} />
+          <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r="5" fill="none" stroke={color} strokeWidth="1.2" opacity="0.6">
+            <animate attributeName="r" from="5" to="16" dur="1.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity" from="0.7" to="0" dur="1.6s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontFamily: 'var(--font-mono)' }}>
+        <span className="t-label" style={{ fontSize: 9 }}>30D AGO · <span style={{ color: 'var(--ink-300)' }}>$0</span></span>
+        <span className="t-label" style={{ fontSize: 9, color: 'var(--phos-green)' }}>BIGGEST WIN +${(window.PROFILE_PNL.biggestWin/1000).toFixed(1)}k · vs stone.singer</span>
+        <span className="t-label" style={{ fontSize: 9, color: 'var(--phos-red)' }}>BIGGEST LOSS ${(window.PROFILE_PNL.biggestLoss/1000).toFixed(1)}k · vs null.ptr()</span>
+        <span className="t-label" style={{ fontSize: 9 }}>NOW · <span className="t-num" style={{ color: 'var(--phos-green)', textShadow: `0 0 6px var(--phos-green)` }}>+${(window.PROFILE_PNL.total30d/1000).toFixed(1)}k</span></span>
+      </div>
     </div>
   );
 }

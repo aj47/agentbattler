@@ -397,28 +397,77 @@ function MiniBoard({ game, size }) {
 // Ticker — caster-style scrolling bar
 // ------------------------------------------------------------
 function Ticker({ items = [] }) {
+  const [open, setOpen] = useState(() => {
+    try { return localStorage.getItem('ab_ticker') !== '0'; } catch { return true; }
+  });
+  useEffect(() => { try { localStorage.setItem('ab_ticker', open ? '1' : '0'); } catch {} }, [open]);
   const joined = [...items, ...items];
   return (
     <div style={{
-      overflow: 'hidden',
+      position: 'fixed', left: 0, right: 0, bottom: 0,
+      zIndex: 40,
+      background: 'linear-gradient(180deg, rgba(5,7,13,0.4), rgba(5,7,13,0.96))',
       borderTop: '1px solid var(--line)',
-      borderBottom: '1px solid var(--line)',
-      background: 'linear-gradient(90deg, rgba(95,240,230,0.05), transparent 50%, rgba(255,181,71,0.05))',
-      whiteSpace: 'nowrap',
-      position: 'relative',
+      backdropFilter: 'blur(8px)',
     }}>
-      <div style={{
-        display: 'inline-block',
-        animation: 'ticker 60s linear infinite',
-        padding: '8px 0',
-      }}>
-        {joined.map((t, i) => (
-          <span key={i} style={{ padding: '0 30px', fontSize: 11, color: 'var(--ink-200)', fontFamily: 'var(--font-mono)' }}>
-            <span style={{ color: 'var(--phos-cyan)', marginRight: 8 }}>◆</span>
-            {t}
-          </span>
-        ))}
-      </div>
+      {open && (
+        <div style={{
+          overflow: 'hidden',
+          borderTop: '1px solid var(--line)',
+          borderBottom: '1px solid var(--line)',
+          background: 'linear-gradient(90deg, rgba(95,240,230,0.05), transparent 50%, rgba(255,181,71,0.05))',
+          whiteSpace: 'nowrap', position: 'relative',
+        }}>
+          <div style={{
+            display: 'inline-block',
+            animation: 'ticker 60s linear infinite',
+            padding: '8px 0',
+          }}>
+            {joined.map((t, i) => (
+              <span key={i} style={{ padding: '0 30px', fontSize: 11, color: 'var(--ink-200)', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ color: 'var(--phos-cyan)', marginRight: 8 }}>◆</span>
+                {t}
+              </span>
+            ))}
+          </div>
+          <div style={{
+            position: 'absolute', right: 0, top: 0, bottom: 0,
+            display: 'flex', alignItems: 'center',
+            paddingRight: 10,
+            background: 'linear-gradient(90deg, transparent, rgba(5,7,13,0.95) 30%)',
+          }}>
+            <button
+              onClick={() => setOpen(false)}
+              title="Collapse ticker"
+              style={{
+                background: 'var(--bg-panel)', border: '1px solid var(--line)',
+                color: 'var(--ink-300)', padding: '4px 10px',
+                fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em',
+                cursor: 'pointer',
+              }}>▾ HIDE</button>
+          </div>
+        </div>
+      )}
+      {!open && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '4px 14px',
+          borderTop: '1px solid var(--line)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <LiveDot />
+            <span className="t-label" style={{ fontSize: 9, color: 'var(--phos-green)' }}>MARKET FEED · HIDDEN</span>
+          </div>
+          <button
+            onClick={() => setOpen(true)}
+            style={{
+              background: 'var(--bg-panel)', border: '1px solid var(--line)',
+              color: 'var(--phos-cyan)', padding: '3px 10px',
+              fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em',
+              cursor: 'pointer',
+            }}>▴ SHOW TICKER</button>
+        </div>
+      )}
     </div>
   );
 }

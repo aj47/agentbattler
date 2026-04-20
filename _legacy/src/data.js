@@ -114,12 +114,14 @@ const CROWD_EMOJI = ['🔥','👑','💀','😤','🧠','⚡','😱','🎯','�
 
 // ==== CASTER TICKER ====
 const TICKER_ITEMS = [
-  'LIVE · go.master.v3 leads stone.singer by ~11pts on move 127',
-  'UPCOMING · quarterfinals in 2:14:08',
-  'UPSET · null.ptr() (12.8kb) defeats quiet_storm (44.1kb)',
-  'BRACKET · knight.gpt advances to semis',
-  'STATS · glorp-9 has sacrificed queen in 62% of wins',
-  'CUP S3 · $48,000 prize pool',
+  'LIVE · go.master.v3 leads stone.singer · +$8,240 swing on move 127',
+  'PAYOUT · knight.gpt holders up 34% this week',
+  'UPSET · null.ptr() (12.8kb) takes quiet_storm for $12,400',
+  'VOLUME · $2.1M wagered on Cup S3 semis',
+  'STATS · glorp-9 has sacrificed queen in 62% of winning trades',
+  'CUP S3 · $480,000 prize pool · finals Friday',
+  'HOT · @rafi up $42k on stone.singer streak',
+  'RUG · baron_bluff holders down 18% after Game 4',
 ];
 
 // ==== BRACKET (Vibe Code Cup S3) ====
@@ -147,39 +149,43 @@ const BRACKET = {
 };
 
 // ==== AGENT PROFILE (selected: go.master.v3) ====
+// PnL amounts are in USD (virtual/casino money). Positive = won for holders.
 const PROFILE_MATCHES = [
-  { opp: 'stone_singer',  game: 'GO19',  result: 'LIVE', score: '—',     date: 'now' },
-  { opp: 'knight_gpt',    game: 'CHESS', result: 'WIN',  score: 'M42',   date: '1d' },
-  { opp: 'quiet_storm',   game: 'GO19',  result: 'WIN',  score: '+14.5', date: '2d' },
-  { opp: 'glorp_9',       game: 'CHESS', result: 'LOSS', score: '0-1',   date: '3d' },
-  { opp: 'tofu_tactics',  game: 'GO19',  result: 'WIN',  score: 'RES',   date: '4d' },
-  { opp: 'baron_bluff',   game: 'CHECKERS', result: 'WIN', score: 'DRAW→W', date: '5d' },
-  { opp: 'checkmate42',   game: 'GO19',  result: 'WIN',  score: '+22.5', date: '6d' },
-  { opp: 'rook_botto',    game: 'CHESS', result: 'WIN',  score: 'M19',   date: '7d' },
+  { opp: 'stone_singer',  game: 'GO19',     result: 'LIVE', score: '—',        date: 'now', pnl: null,    stake: 24800 },
+  { opp: 'knight_gpt',    game: 'CHESS',    result: 'WIN',  score: 'M42',      date: '1d',  pnl:  8420,   stake: 12000 },
+  { opp: 'quiet_storm',   game: 'GO19',     result: 'WIN',  score: '+14.5',    date: '2d',  pnl:  3150,   stake:  4800 },
+  { opp: 'glorp_9',       game: 'CHESS',    result: 'LOSS', score: '0-1',      date: '3d',  pnl: -6200,   stake:  6200 },
+  { opp: 'tofu_tactics',  game: 'GO19',     result: 'WIN',  score: 'RES',      date: '4d',  pnl:  5400,   stake:  8100 },
+  { opp: 'baron_bluff',   game: 'CHECKERS', result: 'WIN',  score: 'DRAW→W',   date: '5d',  pnl:  2100,   stake:  3200 },
+  { opp: 'checkmate42',   game: 'GO19',     result: 'WIN',  score: '+22.5',    date: '6d',  pnl:  9850,   stake: 11400 },
+  { opp: 'rook_botto',    game: 'CHESS',    result: 'WIN',  score: 'M19',      date: '7d',  pnl:  4320,   stake:  5600 },
 ];
 
-const PROFILE_SOURCE_SNIPPET = `// go.master.v3  ·  48,032 bytes  ·  author @chen
-export default function act(state){
-  const {board, toMove, history, ko} = state;
-  if (history.length < 12) return opening(state);
-  const cands = genMoves(board, toMove)
-    .filter(m => !isKo(m, ko))
-    .map(m => ({m, s: score(board, m, toMove)}));
-  cands.sort((a,b) => b.s - a.s);
-  // influence-first: weight corners + side extensions
-  const top = cands.slice(0, 8);
-  const pick = mcts(board, toMove, top, {sims: 240});
-  return pick || cands[0].m;
-}
-// opening book: 34 patterns, joseki-light
-// influence weights: {corner: 1.4, side: 1.1, center: 0.7}
-// ko recog: last-2-ply hash; no superko in 50 games`;
+// Agent-level PnL summary (go.master.v3)
+const PROFILE_PNL = {
+  total30d:    147820,      // $ net P&L, last 30 days
+  total7d:      27040,
+  totalAllTime: 892400,
+  avgTicket:     8600,
+  sharpe:        2.41,      // risk-adj return
+  maxDrawdown:  -18400,
+  biggestWin:    42100,     // vs stone.singer, Cup S2 G4
+  biggestLoss:  -12800,     // vs null.ptr
+  // 30-day equity curve, 30 daily points, cumulative $
+  curve30d: [
+    0, 1200, 2800, 2100, 4400, 6800, 5900, 9200, 12400, 11000,
+    14800, 18200, 17100, 21400, 25800, 24200, 29600, 34100, 31800, 37500,
+    42900, 48200, 45100, 52800, 61400, 58800, 68200, 79500, 94800, 147820,
+  ],
+};
+
+const PROFILE_SOURCE_SNIPPET = `// legacy — kept for reference`;
 
 // ==== expose ====
 Object.assign(window, {
   AGENTS, GAMES, FEATURED_GO_STONES, FEATURED_LAST_MOVE, FEATURED_HOT,
   FEATURED_NOTATION, ONGOING_MATCHES, HIGHLIGHTS, LEADERBOARD,
   CHAT_MESSAGES, CROWD_EMOJI, TICKER_ITEMS, BRACKET, PROFILE_MATCHES,
-  PROFILE_SOURCE_SNIPPET,
+  PROFILE_PNL, PROFILE_SOURCE_SNIPPET,
   agentById: (id) => AGENTS.find(a => a.id === id) || AGENTS[0],
 });
