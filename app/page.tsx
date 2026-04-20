@@ -6,8 +6,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../components/boards";
+import { LiveChat } from "../components/LiveChat";
 import { boardToStones } from "../lib/games/index";
-import type { Agent, Match, Highlight } from "../lib/types";
+import type { Agent, Match, ChatMessage } from "../lib/types";
 import type { GoBoard } from "../lib/games/go";
 import type { ChessBoard } from "../lib/games/chess";
 import type { CheckersDisc } from "../lib/games/checkers";
@@ -15,8 +16,9 @@ import type { CheckersDisc } from "../lib/games/checkers";
 export default function LobbyPage() {
   const agents    = useQuery(api.queries.allAgents);
   const matches   = useQuery(api.queries.allMatches);
-  const highlights = useQuery(api.queries.allHighlights);
   const leaderboard = useQuery(api.queries.leaderboard);
+  const chat = useQuery(api.queries.allChatMessages);
+  const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
   const initMatch = useMutation(api.mutations.initMatchState);
 
   const agentMap = useMemo(() => {
@@ -108,7 +110,7 @@ export default function LobbyPage() {
     }
   }, [featured, betAmount, betSide, placeBet]);
 
-  if (!agents || !matches || !highlights || !leaderboard) {
+  if (!agents || !matches || !leaderboard) {
     return <div className="page-shell" style={{ color: "var(--ink-300)" }}>LOADING…</div>;
   }
   if (!featured) {
@@ -242,18 +244,13 @@ export default function LobbyPage() {
             </div>
           </Panel>
 
-          <Panel label="◆ UPSETS & HIGHLIGHTS" style={{ flexShrink: 0 }}>
-            <div>
-              {(highlights as Highlight[]).map((h, i) => (
-                <div key={i} style={{ padding: "10px 12px", borderBottom: i < highlights.length - 1 ? "1px solid var(--line)" : "none" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                    <Pill color={h.color}>{h.tag}</Pill>
-                    <span className="t-label" style={{ fontSize: 9 }}>{h.when}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--ink-100)", lineHeight: 1.3 }}>{h.title}</div>
-                  <div className="t-num" style={{ fontSize: 10, color: `var(--phos-${h.color})`, marginTop: 2 }}>{h.delta}</div>
-                </div>
-              ))}
+          <Panel
+            label="◐ LIVE CHAT"
+            right={<span className="t-label" style={{ fontSize: 9 }}>{featured.viewers.toLocaleString()} ONLINE</span>}
+            style={{ flexShrink: 0, height: 300, display: "flex", flexDirection: "column", overflow: "hidden" }}
+          >
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <LiveChat messages={(chat as ChatMessage[]) || []} emojis={emojis || []} />
             </div>
           </Panel>
         </div>
