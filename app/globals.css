@@ -1,0 +1,202 @@
+:root {
+  --bg-void: #05070d;
+  --bg-stage: #0a0e1a;
+  --bg-panel: #0f1422;
+  --bg-panel-2: #131a2b;
+  --bg-panel-3: #1a2238;
+
+  --line: #1e2740;
+  --line-2: #2a3454;
+  --line-bright: #3a4870;
+
+  --ink-100: #e8ecf7;
+  --ink-200: #b8c2de;
+  --ink-300: #7b88ab;
+  --ink-400: #4e5a7a;
+  --ink-500: #323c56;
+
+  --phos-cyan: #5ff0e6;
+  --phos-cyan-dim: #3aa8a0;
+  --phos-cyan-glow: rgba(95, 240, 230, 0.35);
+
+  --phos-amber: #ffb547;
+  --phos-amber-dim: #b07a28;
+  --phos-amber-glow: rgba(255, 181, 71, 0.35);
+
+  --phos-magenta: #ff5fb4;
+  --phos-green: #7dff9c;
+  --phos-red: #ff5f6d;
+  --phos-violet: #9b7dff;
+
+  --font-display: 'Space Grotesk', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  --font-body: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --r-sm: 2px;
+  --r-md: 4px;
+  --r-lg: 8px;
+
+  --glow-cyan: 0 0 24px var(--phos-cyan-glow), 0 0 60px rgba(95, 240, 230, 0.15);
+  --glow-amber: 0 0 24px var(--phos-amber-glow), 0 0 60px rgba(255, 181, 71, 0.15);
+  --glow-magenta: 0 0 18px rgba(255, 95, 180, 0.4);
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg-void);
+  color: var(--ink-100);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+.stadium-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 1200px 600px at 50% 110%, rgba(95, 240, 230, 0.08), transparent 60%),
+    radial-gradient(ellipse 800px 500px at 15% 0%, rgba(255, 181, 71, 0.05), transparent 70%),
+    radial-gradient(ellipse 800px 500px at 85% 0%, rgba(155, 125, 255, 0.05), transparent 70%),
+    var(--bg-void);
+}
+.stadium-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(95, 240, 230, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(95, 240, 230, 0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 80%);
+}
+.stadium-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0, 0, 0, 0.25) 2px, rgba(0, 0, 0, 0.25) 3px);
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+
+.t-display { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; }
+.t-mono { font-family: var(--font-mono); }
+.t-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-300);
+}
+.t-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  97% { opacity: 1; }
+  97.5% { opacity: 0.92; }
+  98% { opacity: 1; }
+}
+.flicker { animation: flicker 8s infinite; }
+
+@keyframes livepulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+.live-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--phos-green);
+  box-shadow: 0 0 10px var(--phos-green);
+  animation: livepulse 1.4s ease-in-out infinite;
+}
+
+.panel {
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
+  border: 1px solid var(--line);
+  position: relative;
+}
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--line-bright), transparent);
+}
+.panel-corner {
+  position: absolute;
+  width: 12px; height: 12px;
+  border-color: var(--phos-cyan);
+  border-style: solid;
+  opacity: 0.7;
+}
+.panel-corner.tl { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.panel-corner.tr { top: -1px; right: -1px; border-width: 1px 1px 0 0; }
+.panel-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 1px 1px; }
+.panel-corner.br { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-2);
+  background: var(--bg-panel);
+  color: var(--ink-200);
+  transition: all 120ms var(--ease-out);
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--phos-cyan); color: var(--phos-cyan); box-shadow: var(--glow-cyan); }
+.btn.primary { border-color: var(--phos-cyan); color: var(--phos-cyan); }
+.btn.primary:hover { background: var(--phos-cyan); color: var(--bg-void); }
+.btn.ghost { border-color: transparent; }
+
+::selection { background: var(--phos-cyan); color: var(--bg-void); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-panel); }
+::-webkit-scrollbar-thumb { background: var(--line-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--phos-cyan-dim); }
+
+@keyframes rot { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulseHot {
+  0% { opacity: 0.8; transform: scale(0.7); transform-origin: center; }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translateY(-320px) scale(1.1); opacity: 0; }
+}
+@keyframes chatFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.match-card { transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out); }
+.match-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--phos-cyan) !important;
+  box-shadow: 0 0 18px var(--phos-cyan-glow);
+}

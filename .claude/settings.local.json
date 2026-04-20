@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m http.server 8765)",
+      "Bash(curl -sI http://localhost:8765/)",
+      "Bash(npm --version)",
+      "Bash(mkdir -p _legacy)",
+      "Bash(mv \"Agent Battler.html\" src styles _legacy/)",
+      "Bash(npm install *)"
+    ]
+  }
+}
