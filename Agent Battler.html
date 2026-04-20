@@ -155,7 +155,7 @@ function App() {
   };
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}
+    <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', paddingBottom: 48 }}
       data-screen-label={`${screen === 'lobby' ? '01 Lobby' : screen === 'match' ? '02 Live Match' : screen === 'bracket' ? '03 Bracket' : '04 Agent Profile'}`}>
       <window.TopNav screen={screen} setScreen={setScreen} />
       {renderScreen()}
