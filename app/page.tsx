@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
@@ -42,6 +42,19 @@ export default function LobbyPage() {
   );
 
   const allMatchStates = useQuery(api.queries.allMatchStates);
+  const currentUser = useQuery(api.queries.currentUser);
+  const placeBet = useMutation(api.mutations.placeBet);
+
+  const [betOpen, setBetOpen] = useState(false);
+  const [betSide, setBetSide] = useState<"a" | "b">("a");
+  const [betAmount, setBetAmount] = useState("100");
+  const [betStatus, setBetStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
+  const [betError, setBetError] = useState("");
+
+  const featuredBets = useQuery(
+    api.queries.matchBets,
+    featured ? { matchSlug: featured.slug } : "skip",
+  );
 
   const stateBySlug = useMemo(() => {
     const map = new Map<string, NonNullable<typeof allMatchStates>[number]>();
@@ -80,6 +93,20 @@ export default function LobbyPage() {
     });
     ro.observe(el);
   };
+
+  const handleBet = useCallback(async () => {
+    if (!featured) return;
+    const amt = parseFloat(betAmount);
+    if (!amt || amt <= 0) { setBetError("Enter a valid amount"); setBetStatus("error"); return; }
+    setBetStatus("submitting"); setBetError("");
+    try {
+      await placeBet({ matchSlug: featured.slug, side: betSide, amount: amt });
+      setBetStatus("done");
+      setTimeout(() => { setBetOpen(false); setBetStatus("idle"); setBetAmount("100"); }, 1200);
+    } catch (e: any) {
+      setBetError(e?.message ?? "Failed"); setBetStatus("error");
+    }
+  }, [featured, betAmount, betSide, placeBet]);
 
   if (!agents || !matches || !highlights || !leaderboard) {
     return <div className="page-shell" style={{ color: "var(--ink-300)" }}>LOADING…</div>;
@@ -134,6 +161,7 @@ export default function LobbyPage() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
               <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
+              <button onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }} className="btn" style={{ borderColor: "var(--phos-amber)", color: "var(--phos-amber)" }}>BET</button>
               <Link href={`/match/${featured.slug}`} className="btn primary">ENTER ARENA →</Link>
             </div>
           </div>
@@ -316,6 +344,121 @@ export default function LobbyPage() {
           })}
         </div>
       </div>
+      {/* ── BET MODAL ── */}
+      {betOpen && featured && (
+        <div onClick={() => setBetOpen(false)} style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "rgba(0,0,0,0.72)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "var(--bg-panel)", border: "1px solid var(--phos-amber)",
+            boxShadow: "0 0 40px rgba(255,181,71,0.25)", borderRadius: 2,
+            padding: 28, minWidth: 320, maxWidth: 420, width: "90vw",
+            display: "flex", flexDirection: "column", gap: 18,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="t-label" style={{ color: "var(--phos-amber)", fontSize: 13, letterSpacing: "0.15em" }}>PLACE BET</span>
+              <button onClick={() => setBetOpen(false)} style={{ background: "none", border: "none", color: "var(--ink-400)", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 0 }}>✕</button>
+            </div>
+
+            {/* Pool info */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="t-label" style={{ fontSize: 10 }}>POOL</span>
+                <span className="t-num" style={{ fontSize: 10 }}>${featuredBets?.total?.toFixed(0) ?? "0"} · {featuredBets?.count ?? 0} BETS</span>
+              </div>
+              <div style={{ display: "flex", height: 6, border: "1px solid var(--line)", background: "var(--bg-void)" }}>
+                <div style={{ width: `${featuredBets && featuredBets.total > 0 ? (featuredBets.poolA / featuredBets.total) * 100 : 50}%`, background: "var(--phos-cyan)", transition: "width 0.6s ease" }} />
+                <div style={{ flex: 1, background: "var(--phos-amber)" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="t-num" style={{ fontSize: 10, color: "var(--phos-cyan)" }}>{featA?.handle} ${featuredBets?.poolA?.toFixed(0) ?? "0"}</span>
+                <span className="t-num" style={{ fontSize: 10, color: "var(--phos-amber)" }}>${featuredBets?.poolB?.toFixed(0) ?? "0"} {featB?.handle}</span>
+              </div>
+            </div>
+
+            {/* Side picker */}
+            <div style={{ display: "flex", gap: 10 }}>
+              {(["a", "b"] as const).map(s => {
+                const agent = s === "a" ? featA : featB;
+                const col = s === "a" ? "var(--phos-cyan)" : "var(--phos-amber)";
+                const active = betSide === s;
+                return (
+                  <button key={s} onClick={() => setBetSide(s)} style={{
+                    flex: 1, padding: "10px 8px",
+                    background: active ? (s === "a" ? "rgba(95,240,230,0.12)" : "rgba(255,181,71,0.12)") : "transparent",
+                    border: `1px solid ${active ? col : "var(--line)"}`,
+                    color: active ? col : "var(--ink-300)",
+                    cursor: "pointer", fontFamily: "var(--font-mono)",
+                    fontSize: 11, letterSpacing: "0.12em", borderRadius: 2,
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                  }}>
+                    <span style={{ fontSize: 20 }}>{agent?.glyph}</span>
+                    <span>{agent?.handle}</span>
+                    <span style={{ fontSize: 9, color: "var(--ink-400)" }}>{s === "a" ? `${winProbB}%` : `${winProbW}%`} WIN</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Amount */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span className="t-label" style={{ fontSize: 10 }}>AMOUNT{currentUser ? ` · BAL $${currentUser.balance?.toFixed(0)}` : ""}</span>
+              <input
+                type="number" min={1} value={betAmount}
+                onChange={e => setBetAmount(e.target.value)}
+                style={{
+                  background: "var(--bg-void)", border: "1px solid var(--line)",
+                  color: "var(--ink-100)", fontFamily: "var(--font-mono)", fontSize: 14,
+                  padding: "8px 12px", outline: "none", borderRadius: 2, width: "100%", boxSizing: "border-box",
+                }}
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                {[50, 100, 250, 500].map(v => (
+                  <button key={v} onClick={() => setBetAmount(String(v))} style={{
+                    flex: 1, padding: "4px 0", background: "transparent",
+                    border: "1px solid var(--line)", color: "var(--ink-300)",
+                    fontFamily: "var(--font-mono)", fontSize: 10, cursor: "pointer", borderRadius: 2,
+                  }}>${v}</button>
+                ))}
+              </div>
+            </div>
+
+            {betError && <span style={{ color: "var(--phos-red)", fontSize: 11, fontFamily: "var(--font-mono)" }}>{betError}</span>}
+
+            <button
+              onClick={handleBet}
+              disabled={betStatus === "submitting" || betStatus === "done"}
+              style={{
+                padding: "11px 0", background: betStatus === "done" ? "rgba(95,240,230,0.15)" : "rgba(255,181,71,0.12)",
+                border: `1px solid ${betStatus === "done" ? "var(--phos-cyan)" : "var(--phos-amber)"}`,
+                color: betStatus === "done" ? "var(--phos-cyan)" : "var(--phos-amber)",
+                fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.15em",
+                cursor: betStatus === "submitting" ? "wait" : "pointer", borderRadius: 2,
+              }}
+            >
+              {betStatus === "submitting" ? "SUBMITTING…" : betStatus === "done" ? "BET PLACED ✓" : `PLACE BET · $${betAmount}`}
+            </button>
+
+            {/* My bets on this match */}
+            {featuredBets?.myBets && featuredBets.myBets.length > 0 && (
+              <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+                <span className="t-label" style={{ fontSize: 10, color: "var(--ink-400)", display: "block", marginBottom: 8 }}>YOUR BETS</span>
+                {featuredBets.myBets.map((b, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: i < featuredBets.myBets.length - 1 ? "1px solid var(--line)" : "none" }}>
+                    <span className="t-num" style={{ fontSize: 10, color: b.side === "a" ? "var(--phos-cyan)" : "var(--phos-amber)" }}>
+                      {b.side === "a" ? featA?.handle : featB?.handle}
+                    </span>
+                    <span className="t-num" style={{ fontSize: 10 }}>${b.amount} @ {b.odds}x</span>
+                    <span className="t-label" style={{ fontSize: 9, color: "var(--ink-400)" }}>{b.status.toUpperCase()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

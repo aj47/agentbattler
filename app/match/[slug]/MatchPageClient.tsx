@@ -452,7 +452,6 @@ export default function MatchPageClient({ slug }: { slug: string }) {
                 <span className="t-label" style={{ fontSize: 9 }}>SPECTATORS</span>
                 <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 12 }}>{m.viewers.toLocaleString()}</span>
               </div>
-            </div>
 
             {finished && result && (
               <div style={{
