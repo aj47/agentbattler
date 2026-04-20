@@ -66,11 +66,16 @@ export default function LobbyPage() {
     return map;
   }, [allMatchStates]);
 
-  // Init simulation for every live/starting match that doesn't have a state yet
+  // Only simulate the top 25 matches by viewers to avoid overwhelming Convex.
+  // The rest display static seed data (phase/move from the matches table).
+  const MAX_LIVE_SIMULATIONS = 25;
   useEffect(() => {
     if (!matches || !allMatchStates) return;
-    for (const m of matches as Match[]) {
-      if (m.status !== "live" && m.status !== "starting" && m.status !== "featured") continue;
+    const candidates = (matches as Match[])
+      .filter(m => m.status === "live" || m.status === "starting" || m.status === "featured")
+      .sort((a, b) => b.viewers - a.viewers)
+      .slice(0, MAX_LIVE_SIMULATIONS);
+    for (const m of candidates) {
       const hasState = allMatchStates.some(s => s.matchSlug === m.slug);
       if (!hasState) {
         initMatch({ slug: m.slug, game: m.game as "chess" | "go19" | "checkers" }).catch(() => {});
@@ -78,9 +83,18 @@ export default function LobbyPage() {
     }
   }, [matches, allMatchStates, initMatch]);
 
+  const totalOthers = useMemo(() => {
+    if (!matches || !featured) return 0;
+    return (matches as Match[]).filter(m => m._id !== featured._id).length;
+  }, [matches, featured]);
+
+  // Only render 6 cards on the lobby — rest are on /matches
   const others = useMemo(() => {
     if (!matches || !featured) return (matches as Match[] | undefined) ?? [];
-    return (matches as Match[]).filter(m => m._id !== featured._id);
+    return (matches as Match[])
+      .filter(m => m._id !== featured._id)
+      .sort((a, b) => b.viewers - a.viewers)
+      .slice(0, 6);
   }, [matches, featured]);
 
   // Measure the board container so we can size the board to fill it exactly.
@@ -275,15 +289,10 @@ export default function LobbyPage() {
       <div className="page-shell" style={{ paddingTop: 0 }}>
         <div className="responsive-toolbar" style={{ alignItems: "baseline", marginBottom: 16 }}>
           <div>
-            <div className="t-display" style={{ fontSize: 22 }}>OTHER ARENAS</div>
-            <div className="t-label" style={{ marginTop: 2 }}>{others.length} MATCHES IN PROGRESS · SORTED BY HYPE</div>
+            <div className="t-display" style={{ fontSize: 22 }}>HOT ARENAS</div>
+            <div className="t-label" style={{ marginTop: 2 }}>TOP 6 OF {totalOthers} LIVE MATCHES · SORTED BY VIEWERS</div>
           </div>
-          <div className="filter-row">
-            <button className="btn">ALL</button>
-            <button className="btn">CHESS</button>
-            <button className="btn">GO</button>
-            <button className="btn">CHECKERS</button>
-          </div>
+          <Link href="/matches" className="btn primary">VIEW ALL {totalOthers} MATCHES →</Link>
         </div>
 
         <div className="match-cards-grid">
@@ -297,18 +306,28 @@ export default function LobbyPage() {
             const liveWinB = ms ? Math.round(ms.winProbB * 100) : 50;
             const liveWinW = 100 - liveWinB;
 
+            // Only render live board if this match has an active simulation state
             let miniBoard: React.ReactNode;
-            if (m.game === "go19") {
-              const goBoard = ms?.board as GoBoard | undefined;
-              const stones = goBoard ? boardToStones(goBoard) : [];
-              const lm = ms?.lastMove as { x: number; y: number; c: "b" | "w" } | null | undefined;
-              miniBoard = <HoloBoardGo stones={stones} lastMove={lm ?? null} hot={[]} size={200} tilt={42} />;
-            } else if (m.game === "chess") {
-              const chessBoard = ms?.board as ChessBoard | undefined;
-              miniBoard = <HoloBoardChess board={chessBoard} size={200} tilt={36} />;
+            if (ms) {
+              if (m.game === "go19") {
+                const stones = boardToStones(ms.board as GoBoard);
+                const lm = ms.lastMove as { x: number; y: number; c: "b" | "w" } | null | undefined;
+                miniBoard = <HoloBoardGo stones={stones} lastMove={lm ?? null} hot={[]} size={200} tilt={42} />;
+              } else if (m.game === "chess") {
+                miniBoard = <HoloBoardChess board={ms.board as ChessBoard} size={200} tilt={36} />;
+              } else {
+                miniBoard = <HoloBoardCheckers discs={ms.board as CheckersDisc[]} size={200} tilt={36} />;
+              }
             } else {
-              const discs = ms?.board as CheckersDisc[] | undefined;
-              miniBoard = <HoloBoardCheckers discs={discs} size={200} tilt={36} />;
+              // Static placeholder — no live state yet
+              miniBoard = (
+                <div style={{ width: 200, height: 160, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, opacity: 0.5 }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, color: "var(--ink-400)" }}>
+                    {m.game === "go19" ? "●" : m.game === "chess" ? "♟" : "◎"}
+                  </div>
+                  <span className="t-label" style={{ fontSize: 9 }}>{short} · MV {liveMove}</span>
+                </div>
+              );
             }
 
             return (
