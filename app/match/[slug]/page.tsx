@@ -1,4 +1,5 @@
-"use client";
+import MatchPageClient from "./MatchPageClient";
+import { STATIC_MATCH_SLUGS } from "../../../lib/staticRoutes";
 
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -304,4 +305,9 @@ export default function MatchPage({ params }: { params: Promise<{ slug: string }
       </div>
     </div>
   );
+}
+
+export default async function MatchPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <MatchPageClient slug={slug} />;
 }
