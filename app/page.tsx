@@ -62,11 +62,16 @@ export default function LobbyPage() {
     return map;
   }, [allMatchStates]);
 
-  // Init simulation for every live/starting match that doesn't have a state yet
+  // Only simulate the top 25 matches by viewers to avoid overwhelming Convex.
+  // The rest display static seed data (phase/move from the matches table).
+  const MAX_LIVE_SIMULATIONS = 25;
   useEffect(() => {
     if (!matches || !allMatchStates) return;
-    for (const m of matches as Match[]) {
-      if (m.status !== "live" && m.status !== "starting" && m.status !== "featured") continue;
+    const candidates = (matches as Match[])
+      .filter(m => m.status === "live" || m.status === "starting" || m.status === "featured")
+      .sort((a, b) => b.viewers - a.viewers)
+      .slice(0, MAX_LIVE_SIMULATIONS);
+    for (const m of candidates) {
       const hasState = allMatchStates.some(s => s.matchSlug === m.slug);
       if (!hasState) {
         initMatch({ slug: m.slug, game: m.game as "chess" | "go19" | "checkers" }).catch(() => {});
