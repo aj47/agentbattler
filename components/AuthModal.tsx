@@ -36,8 +36,8 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
       if (mode === "signUp" && name) params.name = name;
       await signIn("password", params);
       onClose();
-    } catch (err: any) {
-      setError(err.message ?? "Authentication failed");
+    } catch (err: unknown) {
+      setError(authErrorMessage(err, mode));
     } finally {
       setLoading(false);
     }
@@ -135,3 +135,22 @@ const inputStyle: React.CSSProperties = {
   color: "var(--ink-100)", fontFamily: "var(--font-mono)", fontSize: 12,
   padding: "9px 12px", outline: "none",
 };
+
+function authErrorMessage(err: unknown, mode: Mode) {
+  const message = err instanceof Error ? err.message : String(err ?? "");
+
+  if (/InvalidSecret|InvalidAccountId|Invalid credentials/i.test(message)) {
+    return "Invalid email or password.";
+  }
+  if (/TooManyFailedAttempts/i.test(message)) {
+    return "Too many failed attempts. Try again later.";
+  }
+  if (/already exists/i.test(message)) {
+    return "An account already exists for this email. Try signing in.";
+  }
+  if (/Invalid password/i.test(message)) {
+    return "Password must be at least 8 characters.";
+  }
+
+  return mode === "signUp" ? "Could not create account." : "Could not sign in.";
+}
