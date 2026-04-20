@@ -39,6 +39,46 @@ export const initMatchState = mutation({
   },
 });
 
+export const placeBet = mutation({
+  args: {
+    matchSlug: v.string(),
+    side: v.union(v.literal("a"), v.literal("b")),
+    amount: v.number(),
+  },
+  handler: async (ctx, { matchSlug, side, amount }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Must be signed in to bet");
+    if (amount <= 0) throw new Error("Amount must be positive");
+
+    const wallet = await ctx.db.query("wallets").withIndex("by_user", q => q.eq("userId", userId)).first();
+    const balance = wallet?.balance ?? 0;
+    if (balance < amount) throw new Error("Insufficient balance");
+
+    const state = await ctx.db.query("matchStates").withIndex("by_slug", q => q.eq("matchSlug", matchSlug)).first();
+    const winProbA = state ? state.winProbB : 0.5;
+    const winProbB = 1 - winProbA;
+    const odds = side === "a"
+      ? (winProbA > 0 ? parseFloat((1 / winProbA).toFixed(2)) : 2)
+      : (winProbB > 0 ? parseFloat((1 / winProbB).toFixed(2)) : 2);
+
+    if (wallet) {
+      await ctx.db.patch(wallet._id, { balance: balance - amount });
+    } else {
+      await ctx.db.insert("wallets", { userId, balance: -amount, totalDeposited: 0, totalWithdrawn: 0 });
+    }
+
+    await ctx.db.insert("bets", {
+      userId,
+      matchSlug,
+      side,
+      amount,
+      odds,
+      status: "open",
+      placedAt: new Date().toISOString(),
+    });
+  },
+});
+
 export const submitAgent = mutation({
   args: {
     handle: v.string(),
@@ -96,32 +136,6 @@ export const deposit = mutation({
       totalDeposited: wallet.totalDeposited + amount,
     });
     return wallet.balance + amount;
-  },
-});
-
-export const placeBet = mutation({
-  args: {
-    matchSlug: v.string(),
-    side: v.union(v.literal("a"), v.literal("b")),
-    amount: v.number(),
-    odds: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Must be signed in to place bets");
-    if (args.amount <= 0) throw new Error("Bet amount must be positive");
-    const wallet = await getOrCreateWallet(ctx, userId);
-    if (wallet.balance < args.amount) throw new Error("Insufficient balance");
-    await ctx.db.patch(wallet._id, { balance: wallet.balance - args.amount });
-    return ctx.db.insert("bets", {
-      userId,
-      matchSlug: args.matchSlug,
-      side: args.side,
-      amount: args.amount,
-      odds: args.odds,
-      status: "open",
-      placedAt: new Date().toISOString(),
-    });
   },
 });
 
