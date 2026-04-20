@@ -137,6 +137,11 @@ export const matchState = query({
       .first(),
 });
 
+export const allMatchStates = query({
+  args: {},
+  handler: async (ctx) => ctx.db.query("matchStates").collect(),
+});
+
 export const bootstrap = query({
   args: {},
   handler: async (ctx) => {

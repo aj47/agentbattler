@@ -1,7 +1,7 @@
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { computeNextMove } from "../lib/games/index";
+import { computeNextMove, getInitialBoard } from "../lib/games/index";
 import type { GameState } from "../lib/games/index";
 
 // Milliseconds between moves per game type
@@ -65,6 +65,40 @@ export const tick = internalMutation({
         winProb: result.winProbB,
         phase: result.phase === "finished" ? "finished" : result.phase,
       });
+    }
+
+    // Auto-cycle featured match when game finishes
+    if (result.phase === "finished" && match?.status === "featured") {
+      await ctx.db.patch(match._id, { status: "live" });
+      const allMatches = await ctx.db.query("matches").collect();
+      const next = allMatches
+        .filter(m => m._id !== match._id && (m.status === "live" || m.status === "starting"))
+        .sort((a, b) => (b.viewers ?? 0) - (a.viewers ?? 0))[0];
+      if (next) {
+        await ctx.db.patch(next._id, { status: "featured" });
+        const nextState = await ctx.db
+          .query("matchStates")
+          .withIndex("by_slug", q => q.eq("matchSlug", next.slug))
+          .first();
+        if (!nextState) {
+          const board = getInitialBoard(next.game as "go19" | "chess" | "checkers");
+          await ctx.db.insert("matchStates", {
+            matchSlug: next.slug,
+            game: next.game as "go19" | "chess" | "checkers",
+            board,
+            toMove: "b" as const,
+            moveCount: 0,
+            notationHistory: [],
+            capturesB: 0,
+            capturesW: 0,
+            winProbB: 0.5,
+            phase: "opening" as const,
+            lastMoveAt: Date.now(),
+          });
+          const delay = MOVE_DELAY[next.game] ?? 2500;
+          await ctx.scheduler.runAfter(delay, internal.simulation.tick, { slug: next.slug });
+        }
+      }
     }
 
     // Schedule next tick unless finished
