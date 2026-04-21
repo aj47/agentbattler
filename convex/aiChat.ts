@@ -119,7 +119,7 @@ export const insertAiMessage = internalMutation({
     const old = await ctx.db.query("chatMessages")
       .filter(q => q.lt(q.field("createdAt"), cutoff))
       .collect();
-    for (const m of old.filter(m => m.source === "ai").slice(0, 20)) {
+    for (const m of old.filter(m => m.source === "seed").slice(0, 20)) {
       await ctx.db.delete(m._id);
     }
 
@@ -129,7 +129,7 @@ export const insertAiMessage = internalMutation({
       msg,
       time: "now",
       order: -now,
-      source: "ai",
+      source: "seed",
       createdAt: now,
     });
   },
