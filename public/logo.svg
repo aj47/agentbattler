@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <!-- Cyan glow filter -->
+    <filter id="glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur1"/>
+      <feGaussianBlur stdDeviation="8" result="blur2"/>
+      <feMerge><feMergeNode in="blur2"/><feMergeNode in="blur1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Amber glow filter -->
+    <filter id="glow-amber" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur1"/>
+      <feGaussianBlur stdDeviation="7" result="blur2"/>
+      <feMerge><feMergeNode in="blur2"/><feMergeNode in="blur1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Subtle scan lines -->
+    <pattern id="scanlines" x="0" y="0" width="1" height="3" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="1" height="2" fill="rgba(0,0,0,0)"/>
+      <rect x="0" y="2" width="1" height="1" fill="rgba(0,0,0,0.18)"/>
+    </pattern>
+    <!-- Background gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05070d"/>
+      <stop offset="100%" stop-color="#080c18"/>
+    </linearGradient>
+    <!-- Cyan text gradient -->
+    <linearGradient id="cyan-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a0fff8"/>
+      <stop offset="100%" stop-color="#5ff0e6"/>
+    </linearGradient>
+    <!-- Amber text gradient -->
+    <linearGradient id="amber-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd580"/>
+      <stop offset="100%" stop-color="#ffb547"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="120" fill="url(#bg-grad)" rx="4"/>
+  <!-- Scan lines overlay -->
+  <rect width="400" height="120" fill="url(#scanlines)" rx="4" opacity="0.6"/>
+  <!-- Subtle border -->
+  <rect width="400" height="120" fill="none" stroke="#5ff0e6" stroke-width="0.5" rx="4" opacity="0.3"/>
+
+  <!-- Corner ticks -->
+  <line x1="0" y1="12" x2="12" y2="0" stroke="#5ff0e6" stroke-width="0.8" opacity="0.5"/>
+  <line x1="388" y1="0" x2="400" y2="12" stroke="#5ff0e6" stroke-width="0.8" opacity="0.5"/>
+  <line x1="0" y1="108" x2="12" y2="120" stroke="#ffb547" stroke-width="0.8" opacity="0.5"/>
+  <line x1="388" y1="120" x2="400" y2="108" stroke="#ffb547" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Glyph / icon: crossed swords made from geometric shapes -->
+  <g transform="translate(30, 60)" filter="url(#glow-cyan)">
+    <!-- Diagonal blade 1 (top-left to bottom-right) -->
+    <line x1="-18" y1="-22" x2="18" y2="22" stroke="#5ff0e6" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Guard crosspiece 1 -->
+    <line x1="-10" y1="6" x2="10" y2="-6" stroke="#5ff0e6" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+    <!-- Blade 2 (top-right to bottom-left) -->
+    <line x1="18" y1="-22" x2="-18" y2="22" stroke="#ffb547" stroke-width="2.5" stroke-linecap="round" filter="url(#glow-amber)"/>
+    <!-- Guard crosspiece 2 -->
+    <line x1="10" y1="6" x2="-10" y2="-6" stroke="#ffb547" stroke-width="2" stroke-linecap="round" opacity="0.9" filter="url(#glow-amber)"/>
+    <!-- Center diamond -->
+    <rect x="-4" y="-4" width="8" height="8" fill="#05070d" stroke="#5ff0e6" stroke-width="1" transform="rotate(45)" filter="url(#glow-cyan)"/>
+    <rect x="-2" y="-2" width="4" height="4" fill="#5ff0e6" transform="rotate(45)" opacity="0.9"/>
+  </g>
+
+  <!-- AGENT text -->
+  <text
+    x="70" y="52"
+    font-family="'Courier New', 'Lucida Console', monospace"
+    font-size="36"
+    font-weight="700"
+    letter-spacing="8"
+    fill="url(#cyan-grad)"
+    filter="url(#glow-cyan)"
+  >AGENT</text>
+
+  <!-- BATTLER text — offset right, amber -->
+  <text
+    x="78" y="88"
+    font-family="'Courier New', 'Lucida Console', monospace"
+    font-size="36"
+    font-weight="700"
+    letter-spacing="6"
+    fill="url(#amber-grad)"
+    filter="url(#glow-amber)"
+  >BATTLER</text>
+
+  <!-- Thin divider line between words -->
+  <line x1="70" y1="96" x2="370" y2="96" stroke="#5ff0e6" stroke-width="0.5" opacity="0.25"/>
+
+  <!-- Version/tagline -->
+  <text
+    x="72" y="110"
+    font-family="'Courier New', 'Lucida Console', monospace"
+    font-size="8"
+    letter-spacing="3"
+    fill="#5ff0e6"
+    opacity="0.45"
+  >AI · ARENA · SEASON 3</text>
+</svg>
