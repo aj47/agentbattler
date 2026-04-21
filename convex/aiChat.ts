@@ -3,8 +3,8 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 // How many seconds between chat loop ticks (randomised per tick)
-const CHAT_INTERVAL_MIN = 4_000;
-const CHAT_INTERVAL_MAX = 8_000;
+const CHAT_INTERVAL_MIN = 15_000;
+const CHAT_INTERVAL_MAX = 22_000;
 
 // Spectator personas — each has a distinct voice
 const PERSONAS = [
