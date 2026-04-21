@@ -1,6 +1,10 @@
-import { internalAction, internalMutation } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+
+// How many seconds between chat loop ticks (randomised per tick)
+const CHAT_INTERVAL_MIN = 4_000;
+const CHAT_INTERVAL_MAX = 8_000;
 
 // Spectator personas — each has a distinct voice
 const PERSONAS = [
@@ -107,6 +111,117 @@ Reply with ONLY the messages, one per line, no labels, no quotes, no extra text.
     } catch {
       // Silently fail — chat is non-critical
     }
+  },
+});
+
+// ── Self-perpetuating chat loop ───────────────────────────────────────────
+
+// Kick off the loop (call once via `npx convex run aiChat:startChatLoop`)
+export const startChatLoop = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await ctx.scheduler.runAfter(1000, internal.aiChat.chatLoopTick, {});
+    return { started: true };
+  },
+});
+
+// Each tick: pick an active match, generate 1-3 messages, reschedule itself
+export const chatLoopTick = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const apiKey = process.env.Z_AI_API_KEY;
+    if (!apiKey) return;
+
+    // Grab a live match for context
+    const states: any[] = await ctx.runQuery(internal.aiChat.getActiveMatchContext, {});
+    if (states.length === 0) {
+      // No active match — try again later
+      await ctx.scheduler.runAfter(10_000, internal.aiChat.chatLoopTick, {});
+      return;
+    }
+    const state = states[Math.floor(Math.random() * states.length)];
+    const match = state.match;
+
+    // How many messages this tick (1–3, weighted toward 1–2)
+    const count = Math.random() < 0.5 ? 1 : Math.random() < 0.7 ? 2 : 3;
+    const shuffled = [...PERSONAS].sort(() => Math.random() - 0.5);
+    const chosen = shuffled.slice(0, count);
+
+    const gameLabel = match.game === "go19" ? "Go 19×19" : match.game === "chess" ? "Chess" : "Checkers";
+    const winPctA = Math.round(state.winProbB * 100);
+    const winPctB = 100 - winPctA;
+
+    const systemPrompt = `You generate Twitch-style spectator chat for AgentBattler, an AI agent game platform. Think fast, chaotic, funny, nerdy — like a real gaming stream chat. Keep it authentic and varied.`;
+
+    const userPrompt = `Generate ${count} chat message${count > 1 ? "s" : ""} for this moment:
+
+Game: ${gameLabel} | Match #${match.slug?.slice(1)}
+${match.a} (${winPctA}% win) vs ${match.b} (${winPctB}% win)
+Move ${state.moveCount} | Phase: ${state.phase?.toUpperCase()}
+
+${chosen.map((p: any, i: number) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`).join("\n")}
+
+Reply with ONLY the messages, one per line, no labels, no quotes. Max 80 chars each.`;
+
+    try {
+      const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "glm-5.1",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user",   content: userPrompt },
+          ],
+          max_tokens: 150,
+          temperature: 1.0,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+        const content = data.choices?.[0]?.message?.content?.trim();
+        if (content) {
+          const lines = content.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 2 && l.length <= 180);
+          for (let i = 0; i < Math.min(lines.length, chosen.length); i++) {
+            await ctx.runMutation(internal.aiChat.insertAiMessage, {
+              user: chosen[i].user,
+              tier: chosen[i].tier,
+              msg: lines[i],
+            });
+            // Stagger messages a little so they don't all land at once
+            if (i < chosen.length - 1) {
+              await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+            }
+          }
+        }
+      }
+    } catch {
+      // silent
+    }
+
+    // Schedule next tick with jitter so it feels natural
+    const delay = CHAT_INTERVAL_MIN + Math.random() * (CHAT_INTERVAL_MAX - CHAT_INTERVAL_MIN);
+    await ctx.scheduler.runAfter(delay, internal.aiChat.chatLoopTick, {});
+  },
+});
+
+export const getActiveMatchContext = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const states = await ctx.db.query("matchStates")
+      .filter(q => q.neq(q.field("phase"), "finished"))
+      .collect();
+    const matches = await ctx.db.query("matches").collect();
+    const matchMap = new Map(matches.map(m => [m.slug, m]));
+    return states
+      .map(s => ({ ...s, match: matchMap.get(s.matchSlug) }))
+      .filter(s => s.match)
+      .sort((a, b) => (b.match?.viewers ?? 0) - (a.match?.viewers ?? 0))
+      .slice(0, 10); // top 10 active by viewers
   },
 });
 
