@@ -85,7 +85,7 @@ export const tick = internalMutation({
 
     // Every 5 moves, trigger AI chat reactions (only for featured/high-viewer matches)
     const newMoveCount = state.moveCount + 1;
-    if (newMoveCount % 5 === 0 && match && result.phase !== "finished") {
+    if (newMoveCount % 3 === 0 && match && result.phase !== "finished") {
       await ctx.scheduler.runAfter(800, internal.aiChat.generateChatMessages, {
         matchSlug: slug,
         game: state.game,
