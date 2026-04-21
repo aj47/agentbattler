@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+
 import { v } from "convex/values";
 import { computeNextMove, getInitialBoard } from "../lib/games/index";
 import type { GameState } from "../lib/games/index";
@@ -99,6 +100,23 @@ export const tick = internalMutation({
           await ctx.scheduler.runAfter(delay, internal.simulation.tick, { slug: next.slug });
         }
       }
+    }
+
+    // Every 5 moves, trigger AI chat reactions (only for featured/high-viewer matches)
+    const newMoveCount = state.moveCount + 1;
+    if (newMoveCount % 5 === 0 && match && result.phase !== "finished") {
+      await ctx.scheduler.runAfter(800, internal.aiChat.generateChatMessages, {
+        matchSlug: slug,
+        game: state.game,
+        agentA: match.a,
+        agentB: match.b,
+        moveCount: newMoveCount,
+        winProbB: result.winProbB,
+        phase: result.phase,
+        lastMove: result.move ?? undefined,
+        capturesB: result.capturesB,
+        capturesW: result.capturesW,
+      });
     }
 
     // Schedule next tick unless finished

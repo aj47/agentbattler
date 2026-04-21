@@ -108,7 +108,7 @@ export default defineSchema({
     msg: v.string(),
     time: v.string(),
     order: v.number(),
-    source: v.optional(v.union(v.literal("seed"), v.literal("human"))),
+    source: v.optional(v.union(v.literal("seed"), v.literal("human"), v.literal("ai"))),
     createdAt: v.optional(v.number()),
   }).index("by_order", ["order"]),
 
