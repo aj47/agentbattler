@@ -136,9 +136,43 @@ export const matchState = query({
       .first(),
 });
 
+// Targeted query — only fetch states for slugs the client actually renders
+export const matchStatesBySlugs = query({
+  args: { slugs: v.array(v.string()) },
+  handler: async (ctx, { slugs }) => {
+    const results = await Promise.all(
+      slugs.map(slug =>
+        ctx.db.query("matchStates").withIndex("by_slug", q => q.eq("matchSlug", slug)).first()
+      )
+    );
+    return results.filter(Boolean);
+  },
+});
+
+// Kept for internal/admin use only — avoid subscribing from clients
 export const allMatchStates = query({
   args: {},
   handler: async (ctx) => ctx.db.query("matchStates").collect(),
+});
+
+// Top N matches by viewers — avoids sending all 500 to the client
+export const topMatches = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const all = await ctx.db.query("matches").collect();
+    return all
+      .sort((a, b) => b.viewers - a.viewers)
+      .slice(0, limit ?? 50);
+  },
+});
+
+// Cheap count — no documents transferred
+export const totalMatchCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("matches").collect();
+    return all.length;
+  },
 });
 
 export const matchBets = query({

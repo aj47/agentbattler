@@ -5,11 +5,11 @@ import { v } from "convex/values";
 import { computeNextMove, getInitialBoard } from "../lib/games/index";
 import type { GameState } from "../lib/games/index";
 
-// Milliseconds between moves per game type
+// Milliseconds between moves — slowed to reduce DB write frequency / bandwidth
 const MOVE_DELAY: Record<string, number> = {
-  go19: 3200,
-  chess: 2000,
-  checkers: 1600,
+  go19: 6000,
+  chess: 4000,
+  checkers: 3000,
 };
 
 export const tick = internalMutation({
@@ -162,7 +162,7 @@ export const resetMatch = internalMutation({
 export const restartFinished = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const MAX_ACTIVE = 25;
+    const MAX_ACTIVE = 10;
     const allStates = await ctx.db.query("matchStates").collect();
     const activeCount = allStates.filter(s => s.phase !== "finished").length;
     const slots = MAX_ACTIVE - activeCount;

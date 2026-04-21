@@ -19,7 +19,7 @@ export const initMatchState = mutation({
     // Cap concurrent simulations to avoid overwhelming the scheduler
     const activeCount = await ctx.db.query("matchStates").collect()
       .then(rows => rows.filter(r => r.phase !== "finished").length);
-    if (activeCount >= 30) return null;
+    if (activeCount >= 10) return null;
 
     const board = getInitialBoard(game);
     const id = await ctx.db.insert("matchStates", {

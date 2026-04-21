@@ -15,7 +15,7 @@ import type { CheckersDisc } from "../lib/games/checkers";
 
 export default function LobbyPage() {
   const agents    = useQuery(api.queries.allAgents);
-  const matches   = useQuery(api.queries.allMatches);
+  const matches   = useQuery(api.queries.topMatches, { limit: 50 });
   const leaderboard = useQuery(api.queries.leaderboard);
   const chat = useQuery(api.queries.allChatMessages);
   const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
@@ -45,7 +45,19 @@ export default function LobbyPage() {
     featured ? { slug: featured.slug } : "skip",
   );
 
-  const allMatchStates = useQuery(api.queries.allMatchStates);
+  // Only subscribe to states for the 7 visible matches (featured + 6 cards)
+  const visibleSlugs = useMemo(() => {
+    if (!matches) return [];
+    const ms = matches as Match[];
+    const feat = ms.find(m => m.status === "featured") ?? ms[0];
+    const top6 = ms.filter(m => m._id !== feat?._id).slice(0, 6);
+    return [feat, ...top6].filter(Boolean).map(m => m!.slug);
+  }, [matches]);
+
+  const visibleStates = useQuery(
+    api.queries.matchStatesBySlugs,
+    visibleSlugs.length > 0 ? { slugs: visibleSlugs } : "skip",
+  );
   const currentUser = useQuery(api.queries.currentUser);
   const placeBet = useMutation(api.mutations.placeBet);
 
@@ -61,32 +73,28 @@ export default function LobbyPage() {
   );
 
   const stateBySlug = useMemo(() => {
-    const map = new Map<string, NonNullable<typeof allMatchStates>[number]>();
-    (allMatchStates ?? []).forEach(s => map.set(s.matchSlug, s));
+    const map = new Map<string, NonNullable<typeof visibleStates>[number]>();
+    (visibleStates ?? []).forEach(s => { if (s) map.set(s.matchSlug, s); });
     return map;
-  }, [allMatchStates]);
+  }, [visibleStates]);
 
-  // Only simulate the top 25 matches by viewers to avoid overwhelming Convex.
-  // The rest display static seed data (phase/move from the matches table).
-  const MAX_LIVE_SIMULATIONS = 25;
+  // Init simulations only for the 7 visible matches (no state yet or finished)
   useEffect(() => {
-    if (!matches || !allMatchStates) return;
-    const candidates = (matches as Match[])
-      .filter(m => m.status === "live" || m.status === "starting" || m.status === "featured")
-      .sort((a, b) => b.viewers - a.viewers)
-      .slice(0, MAX_LIVE_SIMULATIONS);
-    for (const m of candidates) {
-      const hasState = allMatchStates.some(s => s.matchSlug === m.slug);
-      if (!hasState) {
+    if (!matches || !visibleStates) return;
+    const visibleSet = new Set(visibleSlugs);
+    for (const m of (matches as Match[])) {
+      if (!visibleSet.has(m.slug)) continue;
+      const hasActiveState = (visibleStates ?? []).some(
+        s => s && s.matchSlug === m.slug && s.phase !== "finished"
+      );
+      if (!hasActiveState) {
         initMatch({ slug: m.slug, game: m.game as "chess" | "go19" | "checkers" }).catch(() => {});
       }
     }
-  }, [matches, allMatchStates, initMatch]);
+  }, [matches, visibleStates, visibleSlugs, initMatch]);
 
-  const totalOthers = useMemo(() => {
-    if (!matches || !featured) return 0;
-    return (matches as Match[]).filter(m => m._id !== featured._id).length;
-  }, [matches, featured]);
+  const totalMatchCount = useQuery(api.queries.totalMatchCount);
+  const totalOthers = (totalMatchCount ?? 0) - 1;
 
   // Only render 6 cards on the lobby — rest are on /matches
   const others = useMemo(() => {
