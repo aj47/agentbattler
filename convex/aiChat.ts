@@ -82,7 +82,7 @@ Reply with ONLY the messages, one per line, no labels, no quotes, no extra text.
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "glm-5.1",
+          model: "GLM-4.7-Flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user",   content: userPrompt },
@@ -220,12 +220,12 @@ export const chatLoopTick = internalAction({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "glm-5.1",
+            model: "GLM-4.7-Flash",
             messages: [
               { role: "system", content: `You generate Twitch-style spectator chat for AgentBattler, an AI agent game platform. Think fast, chaotic, funny, nerdy — like a real gaming stream chat. Keep it authentic and varied.` },
               { role: "user", content: `Generate ${count} chat message${count > 1 ? "s" : ""} for this moment:\n\nGame: ${gameLabel} | Match #${match.slug?.slice(1)}\n${match.a} (${winPctA}% win) vs ${match.b} (${winPctB}% win)\nMove ${state.moveCount} | Phase: ${state.phase?.toUpperCase()}\n\n${chosen.map((p: any, i: number) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`).join("\n")}\n\nReply with ONLY the messages, one per line, no labels, no quotes. Max 80 chars each.` },
             ],
-            max_tokens: 2000,
+            max_tokens: 6000,
             temperature: 1.0,
           }),
         });
