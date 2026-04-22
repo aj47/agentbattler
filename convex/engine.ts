@@ -173,19 +173,22 @@ export const approveAgent = action({
     if (!sub) throw new Error("Submission not found");
     if (sub.status === "approved") throw new Error("Already approved");
 
-    if (sub.game !== "chess") {
-      throw new Error(`Smoke test only supports chess; ${sub.game} agents cannot be approved yet`);
-    }
-
-    const smoke = smokeTestChess(sub.code);
-    if (!smoke.ok) {
-      throw new Error(`Smoke test failed: ${smoke.reason}`);
+    // Only chess has a live-execution smoke test (matches the arena's engine
+    // coverage). For go/checkers, we rely on the static validation done at
+    // submit time — the arena falls back to heuristic for those games anyway.
+    let smokeMove: string | null = null;
+    if (sub.game === "chess") {
+      const smoke = smokeTestChess(sub.code);
+      if (!smoke.ok) {
+        throw new Error(`Smoke test failed: ${smoke.reason}`);
+      }
+      smokeMove = smoke.move;
     }
 
     const result: { slug: string } = await ctx.runMutation(
       internal.simulation.finalizeApproval,
       { submissionId: args.submissionId },
     );
-    return { slug: result.slug, smokeMove: smoke.move };
+    return { slug: result.slug, smokeMove };
   },
 });

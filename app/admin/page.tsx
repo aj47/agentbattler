@@ -67,7 +67,7 @@ export default function AdminPage() {
     setBanner(null);
     try {
       const res = await approveAgent({ submissionId: id, adminToken: token });
-      setBanner({ kind: "ok", msg: `Approved → ${res.slug} · smoke move ${res.smokeMove}` });
+      setBanner({ kind: "ok", msg: res.smokeMove ? `Approved → ${res.slug} · smoke move ${res.smokeMove}` : `Approved → ${res.slug} · no smoke test (heuristic fallback)` });
     } catch (err: any) {
       setBanner({ kind: "err", msg: err?.message ?? "Approval failed" });
     } finally {

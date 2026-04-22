@@ -149,6 +149,8 @@ export default function SubmitPage() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  // Sticks across other input changes — only dismissed explicitly.
+  const [confirmation, setConfirmation] = useState<null | { handle: string; game: Game; glyph: string; color: string; personality: string; bio: string; sizeKb: number }>(null);
 
   function copyPrompt() {
     navigator.clipboard.writeText(COPY_PROMPTS[game]).then(() => {
@@ -176,6 +178,15 @@ export default function SubmitPage() {
     try {
       await submitAgent({ handle: handle.trim(), game, glyph, color, personality: personality.trim(), bio: bio.trim(), code });
       setStatus("success");
+      setConfirmation({
+        handle: handle.trim(),
+        game,
+        glyph,
+        color,
+        personality: personality.trim(),
+        bio: bio.trim(),
+        sizeKb,
+      });
       setCode("");
     } catch (err: any) {
       setStatus("error");
@@ -197,6 +208,19 @@ export default function SubmitPage() {
         <div className="t-display" style={{ fontSize: 32 }}>SUBMIT AGENT <span style={{ color: "var(--phos-cyan)" }}>· S3</span></div>
         <div className="t-label" style={{ marginTop: 4 }}>VIBE CODE CUP · ONE SUBMISSION PER GAME · 3 GAMES TOTAL · $48,000 PRIZE POOL</div>
       </div>
+
+      {confirmation && (
+        <SubmissionConfirmation
+          data={confirmation}
+          submittedCount={submittedGames.size}
+          onSubmitAnother={(nextGame) => {
+            setConfirmation(null);
+            setStatus("idle");
+            if (nextGame) setGame(nextGame);
+          }}
+          onClose={() => setConfirmation(null)}
+        />
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -508,3 +532,168 @@ const inputStyle: React.CSSProperties = {
   color: "var(--ink-100)", fontFamily: "var(--font-mono)", fontSize: 12,
   padding: "9px 12px", outline: "none",
 };
+
+function SubmissionConfirmation({
+  data,
+  submittedCount,
+  onSubmitAnother,
+  onClose,
+}: {
+  data: { handle: string; game: Game; glyph: string; color: string; personality: string; bio: string; sizeKb: number };
+  submittedCount: number;
+  onSubmitAnother: (nextGame?: Game) => void;
+  onClose: () => void;
+}) {
+  const gameInfo = GAMES.find(g => g.id === data.game)!;
+  const remainingGames = GAMES.filter(g => g.id !== data.game);
+  const allDone = submittedCount >= 3;
+  const glowColor = COLOR_CSS[data.color] ?? "var(--phos-cyan)";
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        background: "rgba(4,8,12,0.85)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 20, backdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          maxWidth: 560, width: "100%",
+          background: "var(--bg-panel)",
+          border: "1px solid var(--phos-green)",
+          boxShadow: "0 0 40px rgba(107,240,131,0.25)",
+        }}
+      >
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "10px 16px", borderBottom: "1px solid var(--line)",
+        }}>
+          <span className="t-label" style={{ fontSize: 10, color: "var(--phos-green)" }}>
+            ✓ SUBMISSION RECEIVED
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: "transparent", border: "1px solid var(--line)",
+              color: "var(--ink-300)", fontFamily: "var(--font-mono)",
+              fontSize: 11, padding: "2px 10px", cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{
+              width: 64, height: 64, flexShrink: 0,
+              border: `1px solid ${glowColor}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 30, color: glowColor,
+              boxShadow: `0 0 18px ${glowColor}55`,
+            }}>{data.glyph}</div>
+            <div style={{ minWidth: 0 }}>
+              <div className="t-display" style={{ fontSize: 22, color: glowColor }}>{data.handle}</div>
+              <div className="t-label" style={{ fontSize: 10, marginTop: 3 }}>
+                {gameInfo.label} · {gameInfo.notation} · {data.sizeKb}kb
+              </div>
+              {data.personality && (
+                <div style={{ fontSize: 11, color: "var(--ink-300)", marginTop: 4, fontFamily: "var(--font-mono)" }}>
+                  {data.personality}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{
+            padding: "12px 14px", border: "1px solid var(--line)",
+            background: "var(--bg-void)", fontSize: 11,
+            color: "var(--ink-200)", fontFamily: "var(--font-mono)", lineHeight: 1.6,
+          }}>
+            Your agent is <span style={{ color: "var(--phos-amber)" }}>PENDING REVIEW</span>.
+            An admin will smoke-test the code and approve or reject it. Check the
+            <Link href="/" style={{ color: "var(--phos-cyan)", margin: "0 4px" }}>lobby</Link>
+            for status updates.
+          </div>
+
+          <div>
+            <div className="t-label" style={{ fontSize: 9, marginBottom: 8 }}>
+              PROGRESS · {submittedCount} / 3 GAMES
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {GAMES.map(g => {
+                const done = g.id === data.game || submittedCount > GAMES.findIndex(x => x.id === g.id);
+                return (
+                  <div key={g.id} style={{
+                    flex: 1, height: 6,
+                    background: done ? "var(--phos-green)" : "var(--line)",
+                    boxShadow: done ? "0 0 8px rgba(107,240,131,0.4)" : "none",
+                  }} />
+                );
+              })}
+            </div>
+          </div>
+
+          {allDone ? (
+            <div style={{
+              padding: "12px 14px", border: "1px solid var(--phos-cyan)",
+              color: "var(--phos-cyan)", fontSize: 11, fontFamily: "var(--font-mono)",
+              textAlign: "center",
+            }}>
+              ✓ ALL 3 GAMES SUBMITTED — GOOD LUCK IN THE CUP
+            </div>
+          ) : (
+            <div>
+              <div className="t-label" style={{ fontSize: 9, marginBottom: 8 }}>SUBMIT ANOTHER GAME</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {remainingGames.map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => onSubmitAnother(g.id)}
+                    style={{
+                      flex: 1, padding: "10px 12px", cursor: "pointer",
+                      border: "1px solid var(--line)",
+                      background: "var(--bg-void)",
+                      color: "var(--ink-200)",
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                    }}
+                  >
+                    <span style={{ fontSize: 18 }}>{g.glyph}</span>
+                    <span className="t-label" style={{ fontSize: 10 }}>{g.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            <Link
+              href="/"
+              className="btn"
+              style={{ flex: 1, padding: "10px 16px", fontSize: 11, textAlign: "center" }}
+            >
+              ← BACK TO LOBBY
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn primary"
+              style={{ flex: 1, padding: "10px 16px", fontSize: 11 }}
+            >
+              DISMISS
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
