@@ -10,6 +10,7 @@
 
 import type * as aiChat from "../aiChat.js";
 import type * as auth from "../auth.js";
+import type * as benchmarks from "../benchmarks.js";
 import type * as http from "../http.js";
 import type * as mutations from "../mutations.js";
 import type * as queries from "../queries.js";
@@ -25,6 +26,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   aiChat: typeof aiChat;
   auth: typeof auth;
+  benchmarks: typeof benchmarks;
   http: typeof http;
   mutations: typeof mutations;
   queries: typeof queries;
