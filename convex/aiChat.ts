@@ -75,7 +75,7 @@ ${chosen.map((p, i) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`)
 Reply with ONLY the messages, one per line, no labels, no quotes, no extra text.`;
 
     try {
-      const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+      const res = await fetch("https://api.z.ai/api/coding/paas/v4/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
@@ -213,7 +213,7 @@ export const chatLoopTick = internalAction({
       const winPctB = 100 - winPctA;
 
       try {
-        const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+        const res = await fetch("https://api.z.ai/api/coding/paas/v4/chat/completions", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
