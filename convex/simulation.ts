@@ -158,6 +158,48 @@ export const resetMatch = internalMutation({
   },
 });
 
+// One-shot: bootstrap simulations from scratch when matchStates table is empty
+// Call via: npx convex run simulation:bootstrapSimulations [--prod]
+export const bootstrapSimulations = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const MAX_ACTIVE = 10;
+    const existing = await ctx.db.query("matchStates").collect();
+    const activeCount = existing.filter(s => s.phase !== "finished").length;
+    const slots = MAX_ACTIVE - activeCount;
+    if (slots <= 0) return { started: 0 };
+
+    const matches = await ctx.db.query("matches").collect();
+    matches.sort((a, b) => (b.viewers ?? 0) - (a.viewers ?? 0));
+
+    let started = 0;
+    for (const match of matches.slice(0, slots)) {
+      const alreadyHasState = existing.some(s => s.matchSlug === match.slug);
+      if (alreadyHasState) continue;
+
+      const game = match.game as "go19" | "chess" | "checkers";
+      const board = getInitialBoard(game);
+      await ctx.db.insert("matchStates", {
+        matchSlug: match.slug,
+        game,
+        board,
+        toMove: "b",
+        moveCount: 0,
+        notationHistory: [],
+        capturesB: 0,
+        capturesW: 0,
+        winProbB: 0.5,
+        phase: "opening",
+        lastMoveAt: Date.now(),
+      });
+      const delay = (MOVE_DELAY[game] ?? 2500) + started * 600;
+      await ctx.scheduler.runAfter(delay, internal.simulation.tick, { slug: match.slug });
+      started++;
+    }
+    return { started };
+  },
+});
+
 // One-shot: restart up to MAX_ACTIVE finished matches right now
 export const restartFinished = internalMutation({
   args: {},
