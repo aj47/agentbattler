@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { getInitialBoard } from "../lib/games/index";
+import { validateAgentSource } from "./agentValidation";
 
 export const initMatchState = mutation({
   args: {
@@ -135,6 +136,9 @@ export const submitAgent = mutation({
     if (sizeKb > 50) throw new Error("Code exceeds 50kb limit");
     if (!args.handle.trim()) throw new Error("Handle required");
 
+    const validation = validateAgentSource(args.code);
+    if (!validation.ok) throw new Error(`Invalid agent: ${validation.reason}`);
+
     const existing = await ctx.db
       .query("submissions")
       .withIndex("by_handle_game", q => q.eq("handle", args.handle.trim()).eq("game", args.game))
@@ -171,6 +175,22 @@ export const deposit = mutation({
       totalDeposited: wallet.totalDeposited + amount,
     });
     return wallet.balance + amount;
+  },
+});
+
+// Mark a submission as rejected. Like approveAgent, guarded by the shared
+// admin token since there's no real user role system yet.
+export const rejectSubmission = mutation({
+  args: { submissionId: v.id("submissions"), adminToken: v.string(), reason: v.optional(v.string()) },
+  handler: async (ctx, { submissionId, adminToken }) => {
+    const expected = process.env.AGENT_ADMIN_TOKEN;
+    if (!expected) throw new Error("Admin actions disabled (AGENT_ADMIN_TOKEN unset)");
+    if (adminToken !== expected) throw new Error("Invalid admin token");
+    const sub = await ctx.db.get(submissionId);
+    if (!sub) throw new Error("Submission not found");
+    if (sub.status === "approved") throw new Error("Already approved");
+    await ctx.db.patch(submissionId, { status: "rejected" });
+    return { ok: true };
   },
 });
 

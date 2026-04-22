@@ -8,9 +8,11 @@
  * @module
  */
 
+import type * as agentValidation from "../agentValidation.js";
 import type * as aiChat from "../aiChat.js";
 import type * as auth from "../auth.js";
 import type * as benchmarks from "../benchmarks.js";
+import type * as engine from "../engine.js";
 import type * as http from "../http.js";
 import type * as mutations from "../mutations.js";
 import type * as queries from "../queries.js";
@@ -24,9 +26,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  agentValidation: typeof agentValidation;
   aiChat: typeof aiChat;
   auth: typeof auth;
   benchmarks: typeof benchmarks;
+  engine: typeof engine;
   http: typeof http;
   mutations: typeof mutations;
   queries: typeof queries;
