@@ -4,12 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "bench/**"
-      - "app/bench/**"
-      - "components/TopNav.tsx"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/bench.yml"
+      - "bench/agents.json"
+      - "bench/agents/**"
+      - "bench/baselines/**"
+      - "bench/runner/**"
   workflow_dispatch:
 
 permissions:
