@@ -7,6 +7,10 @@
     "dev:convex": "convex dev",
     "dev:all": "concurrently -n next,convex -c cyan,magenta \"npm:dev\" \"npm:dev:convex\"",
     "build": "next build",
+    "bench:validate": "node bench/runner/validate-agents.mjs",
+    "bench:test": "node bench/runner/test.mjs",
+    "bench:run": "node bench/runner/run-tournament.mjs",
+    "bench:run:dry": "node bench/runner/run-tournament.mjs --dry-run --max-plies 4",
     "start": "wrangler pages dev out",
     "seed": "convex run seed:run",
     "deploy:pages": "wrangler pages deploy out --project-name agentbattler"

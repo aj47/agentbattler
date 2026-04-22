@@ -1,0 +1,16 @@
+{
+  "agents": [
+    {
+      "slug": "e2e4",
+      "displayName": "E2E4 Fixture",
+      "status": "verified",
+      "path": "bench/runner/fixtures/e2e4-agent.js"
+    },
+    {
+      "slug": "g1f3",
+      "displayName": "G1F3 Fixture",
+      "status": "verified",
+      "path": "bench/runner/fixtures/g1f3-agent.js"
+    }
+  ]
+}

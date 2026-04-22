@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-22T02:59:04.992Z",
+  "runId": "bench-2026-04-22T02-27-45-590Z",
+  "status": "complete",
+  "benchmark": {
+    "game": "chess",
+    "input": "simplified-fen",
+    "turnBudgetMs": 5000,
+    "sourceLimitBytes": 51200,
+    "initialElo": 1500,
+    "eloKFactor": 32,
+    "gamesPerColor": 2,
+    "maxGamePlies": 160,
+    "timeoutPolicy": "timeout, malformed output, crash, or illegal move forfeits the game",
+    "format": "single-js-stdin-stdout",
+    "scoring": "elo-style"
+  },
+  "summary": {
+    "verifiedAgents": 1,
+    "referenceAgents": 1,
+    "gamesPlayed": 4,
+    "fullBenchmarkComplete": true
+  },
+  "provenance": {
+    "runDetailPath": "bench/results/runs/bench-2026-04-22T02-27-45-590Z.json",
+    "workflowUrl": null,
+    "artifactName": null,
+    "artifactUrl": null,
+    "repository": null,
+    "sha": null,
+    "ref": null
+  },
+  "matchLogs": [
+    {
+      "gameId": "baseline-vs-local-auggie-sonnet-46-test-w1",
+      "white": "baseline",
+      "black": "local-auggie-sonnet-46-test",
+      "result": "white",
+      "reason": "checkmate",
+      "plies": 71,
+      "runDetailPath": "bench/results/runs/bench-2026-04-22T02-27-45-590Z.json",
+      "workflowUrl": null,
+      "artifactUrl": null
+    },
+    {
+      "gameId": "local-auggie-sonnet-46-test-vs-baseline-w1",
+      "white": "local-auggie-sonnet-46-test",
+      "black": "baseline",
+      "result": "draw",
+      "reason": "max_plies",
+      "plies": 160,
+      "runDetailPath": "bench/results/runs/bench-2026-04-22T02-27-45-590Z.json",
+      "workflowUrl": null,
+      "artifactUrl": null
+    },
+    {
+      "gameId": "baseline-vs-local-auggie-sonnet-46-test-w2",
+      "white": "baseline",
+      "black": "local-auggie-sonnet-46-test",
+      "result": "draw",
+      "reason": "max_plies",
+      "plies": 160,
+      "runDetailPath": "bench/results/runs/bench-2026-04-22T02-27-45-590Z.json",
+      "workflowUrl": null,
+      "artifactUrl": null
+    },
+    {
+      "gameId": "local-auggie-sonnet-46-test-vs-baseline-w2",
+      "white": "local-auggie-sonnet-46-test",
+      "black": "baseline",
+      "result": "white",
+      "reason": "checkmate",
+      "plies": 75,
+      "runDetailPath": "bench/results/runs/bench-2026-04-22T02-27-45-590Z.json",
+      "workflowUrl": null,
+      "artifactUrl": null
+    }
+  ],
+  "leaderboard": [
+    {
+      "rank": 1,
+      "agentSlug": "local-auggie-sonnet-46-test",
+      "displayName": "Auggie / Claude Sonnet 4.6",
+      "status": "verified",
+      "modelProvider": "Anthropic",
+      "modelName": "Claude Sonnet 4.6",
+      "harnessName": "auggie-interactive",
+      "agentPath": "bench/agents/local-auggie-sonnet-46-test.js",
+      "agentSizeBytes": 20207,
+      "gamesPlayed": 4,
+      "wins": 1,
+      "draws": 2,
+      "losses": 1,
+      "timeouts": 0,
+      "illegalOutputs": 0,
+      "maxMoveMs": 4327,
+      "rating": 1504,
+      "ratingDelta": 4,
+      "avgMoveMs": 4033,
+      "artifactUrl": null,
+      "workflowUrl": null,
+      "runDetailPath": "bench/results/runs/bench-2026-04-22T02-27-45-590Z.json"
+    },
+    {
+      "rank": 2,
+      "agentSlug": "baseline",
+      "displayName": "Baseline Reference",
+      "status": "reference",
+      "modelProvider": "reference",
+      "modelName": "human-authored",
+      "harnessName": "baseline",
+      "agentPath": "bench/baselines/baseline.js",
+      "agentSizeBytes": 27097,
+      "gamesPlayed": 4,
+      "wins": 1,
+      "draws": 2,
+      "losses": 1,
+      "timeouts": 0,
+      "illegalOutputs": 0,
+      "maxMoveMs": 4326,
+      "rating": 1496,
+      "ratingDelta": -4,
+      "avgMoveMs": 4032,
+      "artifactUrl": null,
+      "workflowUrl": null,
+      "runDetailPath": "bench/results/runs/bench-2026-04-22T02-27-45-590Z.json"
+    }
+  ]
+}
