@@ -12,7 +12,7 @@ on:
         required: true
         default: "sonnet4.6"
       timeout_minutes:
-        description: "Interactive Auggie run timeout in minutes"
+        description: "Auggie run timeout in minutes"
         required: true
         default: "30"
 
@@ -58,7 +58,7 @@ jobs:
             exit 1
           }
 
-      - name: Run Auggie interactive generation
+      - name: Run Auggie non-interactive generation
         continue-on-error: true
         run: bash bench/generation/run-auggie-generation.sh
 

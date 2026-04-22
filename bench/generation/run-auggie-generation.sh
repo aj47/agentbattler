@@ -64,7 +64,7 @@ cat > "$METADATA_FILE" <<EOF
   "auggieModel": "$AUGGIE_MODEL",
   "modelProvider": "Anthropic",
   "modelName": "Claude Sonnet 4.6",
-  "harnessName": "auggie-interactive",
+  "harnessName": "auggie-print",
   "timeoutMinutes": $AUGGIE_TIMEOUT_MINUTES,
   "promptFile": "$ARTIFACT_DIR/prompt.md",
   "transcriptFile": "$ARTIFACT_DIR/auggie-transcript.log"
@@ -75,6 +75,8 @@ cat > "$COMMAND_FILE" <<'EOF'
 #!/usr/bin/env bash
 set -uo pipefail
 auggie \
+  --print \
+  --output-format text \
   --model "$AUGGIE_MODEL" \
   --workspace-root "$REPO_ROOT" \
   --allow-indexing \
@@ -109,17 +111,12 @@ EOF
 chmod +x "$COMMAND_FILE"
 export REPO_ROOT AGENT_SLUG AUGGIE_MODEL PROMPT_FILE
 
-echo "Running Auggie interactive generation with model: $AUGGIE_MODEL"
+echo "Running Auggie non-interactive generation with model: $AUGGIE_MODEL"
 echo "Prompt: $PROMPT_FILE"
 echo "Transcript: $TRANSCRIPT_FILE"
 
 set +e
-if script -q -e -c "true" /tmp/auggie-script-smoke.log >/dev/null 2>&1; then
-  run_with_timeout "$AUGGIE_TIMEOUT_MINUTES" script -q -e -c "bash '$COMMAND_FILE'" "$TRANSCRIPT_FILE"
-else
-  echo "script(1) pseudo-terminal capture unavailable; falling back to tee transcript capture"
-  run_with_timeout "$AUGGIE_TIMEOUT_MINUTES" bash "$COMMAND_FILE" 2>&1 | tee "$TRANSCRIPT_FILE"
-fi
+run_with_timeout "$AUGGIE_TIMEOUT_MINUTES" bash "$COMMAND_FILE" 2>&1 | tee "$TRANSCRIPT_FILE"
 AUGGIE_EXIT_CODE=$?
 set -e
 
