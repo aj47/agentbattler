@@ -70,6 +70,9 @@ export default defineSchema({
     streak: v.number(),
     hot: v.boolean(),
     bio: v.string(),
+    // Submitted agents only: source code + game the code targets.
+    code: v.optional(v.string()),
+    submissionGame: v.optional(v.union(v.literal("chess"), v.literal("go19"), v.literal("checkers"))),
   }).index("by_slug", ["slug"]).index("by_elo", ["elo"]),
 
   games: defineTable({
