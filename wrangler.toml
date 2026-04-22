@@ -3,4 +3,4 @@ compatibility_date = "2026-04-20"
 pages_build_output_dir = "out"
 
 [vars]
-NEXT_PUBLIC_CONVEX_URL = "https://steady-falcon-746.convex.cloud"
+NEXT_PUBLIC_CONVEX_URL = "https://knowing-gopher-940.convex.cloud"
