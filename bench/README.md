@@ -95,6 +95,12 @@ successful build. Convex stores the blob in File Storage and records searchable 
 the `benchmarkRuns` table. The `/bench` page will show the permanent Convex artifact link once the
 upload has completed.
 
+The same `BENCH_UPLOAD_TOKEN` and `CONVEX_BENCH_UPLOAD_URL` secrets also make generation runs
+public. `Bench Generate Agent` derives `/bench/generation/upload` from the benchmark upload URL,
+stores a `.tgz` bundle containing the prompt, Auggie transcript, generated source, manifest,
+validation logs, dry-run output, and build log, then records metadata in `benchmarkGenerationRuns`.
+Recent public generation artifacts are listed on `/bench`.
+
 ## Participant generation flow
 
 Generated agents should be created by a trusted manual generation workflow such as
