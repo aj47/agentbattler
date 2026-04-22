@@ -126,16 +126,73 @@ export const startChatLoop = mutation({
 });
 
 // Each tick: pick an active match, generate 1-3 messages, reschedule itself
+// ── Local fallback chat generator ────────────────────────────────────────
+function localChatMessage(persona: typeof PERSONAS[number], match: any, state: any): string {
+  const a = match.a as string;
+  const b = match.b as string;
+  const pct = Math.round((state.winProbB ?? 0.5) * 100);
+  const move = state.moveCount ?? 0;
+  const phase = (state.phase ?? "midgame") as string;
+  const game = match.game as string;
+
+  const leading = pct > 60 ? a : pct < 40 ? b : null;
+  const isClose = pct >= 45 && pct <= 55;
+
+  const pools: Record<string, string[][]> = {
+    goGremlin: [
+      [`${a} playing for influence, ${pct}% feels right`, `joseki deviation at move ${move} was actually sente`, `${leading ?? a} has the corner, this is over`, `${isClose ? "too close to call rn" : `${leading} going for the kill`}`],
+    ],
+    elo_tourist: [
+      [`wait why did ${a} do that lol`, `is ${pct}% good or bad for ${a}??`, `someone explain move ${move} to me`, `${a} vs ${b} is so hype`],
+    ],
+    patternboi: [
+      [`classic ${game === "chess" ? "pin motif" : "ladder"} setup at move ${move}`, `${a} just played the ${game === "go19" ? "3-3 invasion" : "fork pattern"}`, `pattern recognition: ${leading ?? a} is in control`, `move ${move} is textbook ${phase}`],
+    ],
+    sgf_dad: [
+      [`MOVE ${move} REMINDS ME OF THE 2019 FINALS`, `${a.toUpperCase()} VS ${b.toUpperCase()} IS THE MATCHUP I WANTED`, `${pct > 50 ? a.toUpperCase() : b.toUpperCase()} TAKE THE LEAD`, `THIS IS EXACTLY HOW GLORP_9 PLAYED IN SEASON 2`],
+    ],
+    glorper: [
+      [`glorp wouldve played this better`, `${a} is basically glorp with worse vibes`, `${pct}%?? glorp would be at 80 by now`, `glorp ate this exact position for breakfast`],
+    ],
+    byoyomi: [
+      [`move ${move}. sure.`, `${pct}%. ok.`, `${a} exists.`, `${phase}.`],
+    ],
+    cicero: [
+      [`however, if we examine ${a}'s position at move ${move}...`, `the ${pct}% win probability, however, understates the complexity`, `however, the real question is whether ${b} can hold`, `however this phase resolves, the opening was decisive`],
+    ],
+    rook_stan: [
+      [`rook_botto would dominate this position`, `no rooks involved = less interesting imo`, `${a} needs to activate the rook energy`, `every game is better with rooks. just saying.`],
+    ],
+    kifu_enjoyer: [
+      [`move ${move}: 0.${(move * 7 % 100).toString().padStart(2,"0")}ms avg response time`, `${a} pgn is already 4.2kb at move ${move}`, `${pct}% winprob delta: ${Math.abs(pct - 50)} pts from center`, `benchmark: ${b} efficiency dropping in ${phase}`],
+    ],
+    tenuki_dad: [
+      [`Shusaku would weep at move ${move}`, `${a} has abandoned the spirit of the stone`, `this is not Go. this is ${phase} anxiety.`, `${pct}% and they still haven't found the vital point`],
+    ],
+    zergling_00: [
+      [`rush ${b} rush rush rush`, `${a} is expanding too slow, zerg wouldn't allow this`, `move ${move} was a drone pull moment`, `${pct}% that's a gg incoming`],
+    ],
+    praxis_dev: [
+      [`${a}'s eval function is just a fold over material :: Int`, `move ${move} is a pure function with no side effects`, `the game state is a monad and ${leading ?? a} is in the happy path`, `${pct}% win? that's just a probability monad`],
+    ],
+    kodama_fan: [
+      [`the stones speak at move ${move}`, `${a} and ${b}, two spirits in harmony`, `${pct}% means nothing — the board remembers`, `kodama.spirit would find beauty even in ${phase}`],
+    ],
+    hex_watcher: [
+      [`${pct}% huh. sure why not`, `${a} doing better than I expected. low bar.`, `move ${move} didn't crash the server. progress.`, `${b} still in this? unexpected.`],
+    ],
+  };
+
+  const lines = pools[persona.user]?.[0] ?? [`${a} vs ${b}, move ${move}`];
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
 export const chatLoopTick = internalAction({
   args: {},
   handler: async (ctx) => {
-    const apiKey = process.env.Z_AI_API_KEY;
-    if (!apiKey) return;
-
     // Grab a live match for context
     const states: any[] = await ctx.runQuery(internal.aiChat.getActiveMatchContext, {});
     if (states.length === 0) {
-      // No active match — try again later
       await ctx.scheduler.runAfter(10_000, internal.aiChat.chatLoopTick, {});
       return;
     }
@@ -147,60 +204,56 @@ export const chatLoopTick = internalAction({
     const shuffled = [...PERSONAS].sort(() => Math.random() - 0.5);
     const chosen = shuffled.slice(0, count);
 
-    const gameLabel = match.game === "go19" ? "Go 19×19" : match.game === "chess" ? "Chess" : "Checkers";
-    const winPctA = Math.round(state.winProbB * 100);
-    const winPctB = 100 - winPctA;
+    const apiKey = process.env.Z_AI_API_KEY;
+    let aiLines: string[] | null = null;
 
-    const systemPrompt = `You generate Twitch-style spectator chat for AgentBattler, an AI agent game platform. Think fast, chaotic, funny, nerdy — like a real gaming stream chat. Keep it authentic and varied.`;
+    if (apiKey) {
+      const gameLabel = match.game === "go19" ? "Go 19×19" : match.game === "chess" ? "Chess" : "Checkers";
+      const winPctA = Math.round(state.winProbB * 100);
+      const winPctB = 100 - winPctA;
 
-    const userPrompt = `Generate ${count} chat message${count > 1 ? "s" : ""} for this moment:
+      try {
+        const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "glm-5.1",
+            messages: [
+              { role: "system", content: `You generate Twitch-style spectator chat for AgentBattler, an AI agent game platform. Think fast, chaotic, funny, nerdy — like a real gaming stream chat. Keep it authentic and varied.` },
+              { role: "user", content: `Generate ${count} chat message${count > 1 ? "s" : ""} for this moment:\n\nGame: ${gameLabel} | Match #${match.slug?.slice(1)}\n${match.a} (${winPctA}% win) vs ${match.b} (${winPctB}% win)\nMove ${state.moveCount} | Phase: ${state.phase?.toUpperCase()}\n\n${chosen.map((p: any, i: number) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`).join("\n")}\n\nReply with ONLY the messages, one per line, no labels, no quotes. Max 80 chars each.` },
+            ],
+            max_tokens: 150,
+            temperature: 1.0,
+          }),
+        });
 
-Game: ${gameLabel} | Match #${match.slug?.slice(1)}
-${match.a} (${winPctA}% win) vs ${match.b} (${winPctB}% win)
-Move ${state.moveCount} | Phase: ${state.phase?.toUpperCase()}
-
-${chosen.map((p: any, i: number) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`).join("\n")}
-
-Reply with ONLY the messages, one per line, no labels, no quotes. Max 80 chars each.`;
-
-    try {
-      const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "glm-5.1",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user",   content: userPrompt },
-          ],
-          max_tokens: 150,
-          temperature: 1.0,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
-        const content = data.choices?.[0]?.message?.content?.trim();
-        if (content) {
-          const lines = content.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 2 && l.length <= 180);
-          for (let i = 0; i < Math.min(lines.length, chosen.length); i++) {
-            await ctx.runMutation(internal.aiChat.insertAiMessage, {
-              user: chosen[i].user,
-              tier: chosen[i].tier,
-              msg: lines[i],
-            });
-            // Stagger messages a little so they don't all land at once
-            if (i < chosen.length - 1) {
-              await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
-            }
+        if (res.ok) {
+          const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+          const content = data.choices?.[0]?.message?.content?.trim();
+          if (content) {
+            const lines = content.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 2 && l.length <= 180);
+            if (lines.length > 0) aiLines = lines;
           }
         }
+      } catch {
+        // fall through to local generator
       }
-    } catch {
-      // silent
+    }
+
+    // Insert messages — AI if available, otherwise local templates
+    for (let i = 0; i < chosen.length; i++) {
+      const msg = aiLines?.[i] ?? localChatMessage(chosen[i], match, state);
+      await ctx.runMutation(internal.aiChat.insertAiMessage, {
+        user: chosen[i].user,
+        tier: chosen[i].tier,
+        msg,
+      });
+      if (i < chosen.length - 1) {
+        await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+      }
     }
 
     // Schedule next tick with jitter so it feels natural
