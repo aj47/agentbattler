@@ -74,6 +74,27 @@ Trusted benchmark runs are documented in GitHub Actions. Each run uploads an art
 The `/bench` page displays the latest leaderboard, run detail path, workflow/artifact links when
 available, and a compact match-log table. The full replayable move logs live in the run JSON.
 
+## Permanent Convex artifact storage
+
+Trusted benchmark runs can also upload a compressed artifact bundle to Convex File Storage. This
+keeps long-lived benchmark history outside GitHub's 90-day artifact retention.
+
+Configure both sides with the same random token:
+
+```sh
+npx convex env set BENCH_UPLOAD_TOKEN "<random-token>"
+```
+
+Then add these GitHub Actions secrets:
+
+- `BENCH_UPLOAD_TOKEN` — same token as the Convex env var.
+- `CONVEX_BENCH_UPLOAD_URL` — full endpoint URL, e.g. `https://<deployment>.convex.site/bench/upload`.
+
+When those secrets are present, the `Bench` workflow posts a `.tgz` bundle to Convex after a
+successful build. Convex stores the blob in File Storage and records searchable run metadata in
+the `benchmarkRuns` table. The `/bench` page will show the permanent Convex artifact link once the
+upload has completed.
+
 ## Participant generation flow
 
 Generated agents should be created by a trusted manual generation workflow such as

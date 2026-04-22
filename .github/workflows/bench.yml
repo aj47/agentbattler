@@ -58,6 +58,69 @@ jobs:
           set -o pipefail
           npm run build | tee bench-build.log
 
+      - name: Upload benchmark artifact to Convex storage
+        env:
+          CONVEX_BENCH_UPLOAD_URL: ${{ secrets.CONVEX_BENCH_UPLOAD_URL }}
+          BENCH_UPLOAD_TOKEN: ${{ secrets.BENCH_UPLOAD_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CONVEX_BENCH_UPLOAD_URL}" ] || [ -z "${BENCH_UPLOAD_TOKEN}" ]; then
+            echo "Skipping Convex benchmark upload; CONVEX_BENCH_UPLOAD_URL or BENCH_UPLOAD_TOKEN is not configured."
+            exit 0
+          fi
+
+          mkdir -p bench/artifacts
+          archive="bench/artifacts/${BENCH_RESULTS_ARTIFACT_NAME}.tgz"
+          tar -czf "$archive" \
+            bench/results \
+            bench/agents.json \
+            bench/agents \
+            bench/baselines \
+            bench/generation/prompts \
+            bench-test.log \
+            bench-validate.log \
+            bench-run.log \
+            bench-build.log \
+            spec.md
+
+          sha256="$(sha256sum "$archive" | awk '{print $1}')"
+          storage_size_bytes="$(wc -c < "$archive" | tr -d ' ')"
+
+          BENCH_ARTIFACT_SHA256="$sha256" node <<'NODE'
+          const fs = require("fs");
+          const latest = JSON.parse(fs.readFileSync("bench/results/latest.json", "utf8"));
+          const metadata = {
+            runId: latest.runId,
+            status: latest.status,
+            generatedAt: latest.generatedAt,
+            gamesPlayed: latest.summary?.gamesPlayed ?? 0,
+            verifiedAgents: latest.summary?.verifiedAgents ?? 0,
+            referenceAgents: latest.summary?.referenceAgents ?? 0,
+            artifactName: process.env.BENCH_RESULTS_ARTIFACT_NAME,
+            storageSha256: process.env.BENCH_ARTIFACT_SHA256,
+            repository: process.env.GITHUB_REPOSITORY,
+            githubRunId: process.env.GITHUB_RUN_ID,
+            githubSha: process.env.GITHUB_SHA,
+            githubRef: process.env.GITHUB_REF_NAME,
+            workflowUrl: `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+            runDetailPath: latest.provenance?.runDetailPath,
+          };
+          fs.writeFileSync("bench/artifacts/convex-metadata.json", JSON.stringify(metadata, null, 2));
+          NODE
+
+          metadata_b64="$(base64 bench/artifacts/convex-metadata.json | tr -d '\n')"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${BENCH_UPLOAD_TOKEN}" \
+            --header "Content-Type: application/gzip" \
+            --header "X-Benchmark-Metadata: ${metadata_b64}" \
+            --data-binary "@${archive}" \
+            "${CONVEX_BENCH_UPLOAD_URL}" \
+            | tee bench/artifacts/convex-upload-response.json
+
+          echo "Uploaded benchmark artifact to Convex (${storage_size_bytes} bytes, sha256:${sha256})."
+
       - name: Upload static benchmark results
         if: always()
         uses: actions/upload-artifact@v4
@@ -73,5 +136,6 @@ jobs:
             bench-validate.log
             bench-run.log
             bench-build.log
+            bench/artifacts/**/*
             spec.md
           retention-days: 90
