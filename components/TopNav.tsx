@@ -11,6 +11,7 @@ import { AuthModal } from "./AuthModal";
 
 const items = [
   { href: "/", label: "LOBBY", match: (p: string) => p === "/" },
+  { href: "/leaderboard", label: "LEADERBOARD", match: (p: string) => p.startsWith("/leaderboard") },
   { href: "/match", label: "LIVE MATCH", match: (p: string) => p.startsWith("/match") },
   { href: "/agent", label: "AGENT", match: (p: string) => p.startsWith("/agent") },
   { href: "/submit", label: "SUBMIT", match: (p: string) => p.startsWith("/submit") },
