@@ -1,0 +1,41 @@
+name: Bench Validate
+
+on:
+  pull_request:
+    paths:
+      - "bench/**"
+      - "app/bench/**"
+      - "components/TopNav.tsx"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/bench-validate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Safe benchmark validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test benchmark runner
+        run: npm run bench:test
+
+      - name: Validate benchmark agents
+        run: npm run bench:validate
+
+      - name: Build app
+        run: npm run build

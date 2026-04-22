@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runId": "reference-baseline-2026-04-21",
+  "status": "reference",
+  "createdAt": "2026-04-21T00:00:00.000Z",
+  "description": "Initial static benchmark scaffold with the reference baseline agent only.",
+  "benchmark": {
+    "game": "chess",
+    "input": "simplified-fen",
+    "turnBudgetMs": 5000,
+    "sourceLimitBytes": 51200,
+    "pairing": "every verified agent vs every other verified agent, 2 games as white and 2 as black",
+    "scoring": "elo-style"
+  },
+  "agents": [
+    {
+      "agentSlug": "baseline",
+      "displayName": "Baseline Reference",
+      "sourcePath": "bench/baselines/baseline.js",
+      "sourceSizeBytes": 27097,
+      "sha256": null,
+      "verified": false
+    }
+  ],
+  "artifacts": []
+}

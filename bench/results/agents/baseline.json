@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "agentSlug": "baseline",
+  "displayName": "Baseline Reference",
+  "status": "reference",
+  "sourcePath": "bench/baselines/baseline.js",
+  "sourceSizeBytes": 27097,
+  "modelProvider": "reference",
+  "modelName": "human-authored",
+  "harnessName": "baseline",
+  "notes": "Reference baseline moved into bench/baselines for runner smoke tests and early comparison."
+}

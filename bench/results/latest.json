@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-21T00:00:00.000Z",
+  "runId": "reference-baseline-2026-04-21",
+  "status": "reference",
+  "benchmark": {
+    "game": "chess",
+    "input": "simplified-fen",
+    "turnBudgetMs": 5000,
+    "sourceLimitBytes": 51200,
+    "format": "single-js-stdin-stdout",
+    "scoring": "elo-style"
+  },
+  "summary": {
+    "verifiedAgents": 0,
+    "referenceAgents": 1,
+    "gamesPlayed": 0,
+    "fullBenchmarkComplete": false
+  },
+  "leaderboard": [
+    {
+      "rank": 1,
+      "agentSlug": "baseline",
+      "displayName": "Baseline Reference",
+      "status": "reference",
+      "modelProvider": "reference",
+      "modelName": "human-authored",
+      "harnessName": "baseline",
+      "rating": 1500,
+      "ratingDelta": 0,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "draws": 0,
+      "losses": 0,
+      "timeouts": 0,
+      "illegalOutputs": 0,
+      "avgMoveMs": null,
+      "maxMoveMs": null,
+      "agentSizeBytes": 27097,
+      "agentPath": "bench/baselines/baseline.js",
+      "artifactUrl": null,
+      "workflowUrl": null,
+      "runDetailPath": "bench/results/runs/reference-baseline-2026-04-21.json"
+    }
+  ]
+}

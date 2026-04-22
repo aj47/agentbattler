@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "agents": [
+    {
+      "slug": "baseline",
+      "displayName": "Baseline Reference",
+      "status": "reference",
+      "path": "bench/baselines/baseline.js"
+    }
+  ]
+}
