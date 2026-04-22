@@ -22,5 +22,15 @@
       "verified": false
     }
   ],
+  "provenance": {
+    "runDetailPath": "bench/results/runs/reference-baseline-2026-04-21.json",
+    "workflowUrl": null,
+    "artifactName": null,
+    "artifactUrl": null,
+    "repository": null,
+    "sha": null,
+    "ref": null
+  },
+  "games": [],
   "artifacts": []
 }

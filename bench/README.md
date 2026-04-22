@@ -59,6 +59,28 @@ Current runner policy: timeout, malformed output, crash, or illegal move forfeit
 This makes the spec's "timeout loses the move" rule operational for chess positions where
 there is no valid skipped-turn move.
 
+## Spectator audit trail
+
+Trusted benchmark runs are documented in GitHub Actions. Each run uploads an artifact containing:
+
+- `bench/results/latest.json` with leaderboard and provenance metadata
+- `bench/results/runs/<runId>.json` with full per-game and per-move logs
+- FEN before/after every move, UCI output, side, runtime, stdout/stderr summaries
+- `bench/agents.json`
+- committed agent source files and baseline source files
+- benchmark prompt files when generation prompts are committed
+- benchmark test, validation, run, and build logs
+
+The `/bench` page displays the latest leaderboard, run detail path, workflow/artifact links when
+available, and a compact match-log table. The full replayable move logs live in the run JSON.
+
+## Participant generation flow
+
+Generated agents should be created by a trusted manual generation workflow such as
+`Bench Generate Agent`. That workflow stores the full prompt, Auggie model id, terminal transcript,
+generated source, manifest diff, validation output, and dry-run tournament output in its artifact.
+Maintainers can then review the artifact and commit the generated agent in a follow-up PR.
+
 ## Prior art
 
 Rules should mostly copy `https://github.com/aj47/vibe-code-cup-challenge1`, with the

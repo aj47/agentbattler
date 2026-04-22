@@ -20,6 +20,8 @@ jobs:
     name: Trusted benchmark run
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    env:
+      BENCH_RESULTS_ARTIFACT_NAME: bench-results-${{ github.run_id }}-${{ github.sha }}
     steps:
       - name: Checkout trusted ref
         uses: actions/checkout@v4
@@ -34,23 +36,42 @@ jobs:
         run: npm ci
 
       - name: Test benchmark runner
-        run: npm run bench:test
+        run: |
+          set -o pipefail
+          npm run bench:test | tee bench-test.log
 
       - name: Validate benchmark agents
-        run: npm run bench:validate
+        run: |
+          set -o pipefail
+          npm run bench:validate | tee bench-validate.log
 
       - name: Run tournament and write static results
-        run: npm run bench:run
+        run: |
+          set -o pipefail
+          npm run bench:run | tee bench-run.log
+
+      - name: Write benchmark summary
+        run: node bench/runner/write-summary.mjs
 
       - name: Build app
-        run: npm run build
+        run: |
+          set -o pipefail
+          npm run build | tee bench-build.log
 
       - name: Upload static benchmark results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bench-results-${{ github.sha }}
+          name: ${{ env.BENCH_RESULTS_ARTIFACT_NAME }}
           path: |
             bench/results/**/*.json
             bench/agents.json
+            bench/agents/**/*.js
+            bench/baselines/**/*.js
+            bench/generation/prompts/**/*.md
+            bench-test.log
+            bench-validate.log
+            bench-run.log
+            bench-build.log
             spec.md
           retention-days: 90

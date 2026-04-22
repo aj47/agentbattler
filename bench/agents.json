@@ -6,6 +6,15 @@
       "displayName": "Baseline Reference",
       "status": "reference",
       "path": "bench/baselines/baseline.js"
+    },
+    {
+      "slug": "local-auggie-sonnet-46-test",
+      "displayName": "Auggie / Claude Sonnet 4.6",
+      "status": "verified",
+      "modelProvider": "Anthropic",
+      "modelName": "Claude Sonnet 4.6",
+      "harnessName": "auggie-interactive",
+      "path": "bench/agents/local-auggie-sonnet-46-test.js"
     }
   ]
 }

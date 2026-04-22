@@ -47,6 +47,26 @@ function scoreFor(result, color) {
   return result === color ? 1 : 0;
 }
 
+function workflowUrl() {
+  if (!process.env.GITHUB_RUN_ID || !process.env.GITHUB_REPOSITORY) return null;
+  const server = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+  return `${server}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+}
+
+function provenance(runId) {
+  const url = workflowUrl();
+  const artifactName = process.env.BENCH_RESULTS_ARTIFACT_NAME ?? null;
+  return {
+    runDetailPath: `bench/results/runs/${runId}.json`,
+    workflowUrl: url,
+    artifactName,
+    artifactUrl: url && artifactName ? `${url}#artifacts` : null,
+    repository: process.env.GITHUB_REPOSITORY ?? null,
+    sha: process.env.GITHUB_SHA ?? null,
+    ref: process.env.GITHUB_REF_NAME ?? null
+  };
+}
+
 function recordGameStats(stats, game, ratings) {
   const white = stats[game.white.agentSlug];
   const black = stats[game.black.agentSlug];
@@ -147,7 +167,7 @@ async function playGame({ white, black, gameId, maxPlies }) {
   return { gameId, white: { agentSlug: white.slug }, black: { agentSlug: black.slug }, result, reason, moves };
 }
 
-function leaderboardRows(stats, ratings, runId) {
+function leaderboardRows(stats, ratings, runId, runProvenance) {
   return Object.values(stats)
     .map(row => ({
       rank: 0,
@@ -156,9 +176,9 @@ function leaderboardRows(stats, ratings, runId) {
       ratingDelta: Math.round(ratings[row.agentSlug] - INITIAL_ELO),
       avgMoveMs: row.moveCount ? Math.round(row.totalMoveMs / row.moveCount) : null,
       maxMoveMs: row.maxMoveMs,
-      artifactUrl: null,
-      workflowUrl: process.env.GITHUB_RUN_ID ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` : null,
-      runDetailPath: `bench/results/runs/${runId}.json`
+      artifactUrl: runProvenance.artifactUrl,
+      workflowUrl: runProvenance.workflowUrl,
+      runDetailPath: runProvenance.runDetailPath
     }))
     .sort((a, b) => b.rating - a.rating || (a.timeouts + a.illegalOutputs) - (b.timeouts + b.illegalOutputs) || b.wins - a.wins || a.agentSlug.localeCompare(b.agentSlug))
     .map((row, index) => {
@@ -189,7 +209,19 @@ async function main() {
   for (const game of games) recordGameStats(stats, game, ratings);
 
   const createdAt = new Date().toISOString();
-  const leaderboard = leaderboardRows(stats, ratings, runId);
+  const runProvenance = provenance(runId);
+  const leaderboard = leaderboardRows(stats, ratings, runId, runProvenance);
+  const matchLogs = games.map(game => ({
+    gameId: game.gameId,
+    white: game.white.agentSlug,
+    black: game.black.agentSlug,
+    result: game.result,
+    reason: game.reason,
+    plies: game.moves.length,
+    runDetailPath: runProvenance.runDetailPath,
+    workflowUrl: runProvenance.workflowUrl,
+    artifactUrl: runProvenance.artifactUrl
+  }));
   const run = {
     schemaVersion: 1,
     runId,
@@ -207,6 +239,7 @@ async function main() {
       timeoutPolicy: "timeout, malformed output, crash, or illegal move forfeits the game"
     },
     validations,
+    provenance: runProvenance,
     agents: await Promise.all(agents.map(async agent => ({
       agentSlug: agent.slug,
       displayName: agent.displayName ?? agent.slug,
@@ -230,6 +263,8 @@ async function main() {
       gamesPlayed: games.length,
       fullBenchmarkComplete: agents.length >= 2
     },
+    provenance: runProvenance,
+    matchLogs,
     leaderboard
   };
 

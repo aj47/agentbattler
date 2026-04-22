@@ -1,0 +1,128 @@
+name: Bench Generate Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent_slug:
+        description: "Agent slug to generate"
+        required: true
+        default: "auggie-claude-sonnet-46"
+      auggie_model:
+        description: "Auggie model id. Claude Sonnet 4.6 is sonnet4.6"
+        required: true
+        default: "sonnet4.6"
+      timeout_minutes:
+        description: "Interactive Auggie run timeout in minutes"
+        required: true
+        default: "30"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate chess agent with Auggie
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BENCH_AGENT_SLUG: ${{ inputs.agent_slug }}
+      AUGGIE_MODEL: ${{ inputs.auggie_model }}
+      AUGGIE_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+      ARTIFACT_DIR: bench/generation/artifacts/${{ github.run_id }}-${{ inputs.agent_slug }}
+      AUGMENT_SESSION_AUTH: ${{ secrets.AUGMENT_SESSION_AUTH }}
+    steps:
+      - name: Checkout trusted ref
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Auggie CLI
+        run: npm install -g @augmentcode/auggie
+
+      - name: Verify Auggie model id
+        run: |
+          auggie model list | tee model-list.txt
+          grep -q "\[${AUGGIE_MODEL}\]" model-list.txt
+
+      - name: Require Augment auth secret
+        run: |
+          test -n "$AUGMENT_SESSION_AUTH" || {
+            echo "Missing AUGMENT_SESSION_AUTH secret" >&2
+            exit 1
+          }
+
+      - name: Run Auggie interactive generation
+        continue-on-error: true
+        run: bash bench/generation/run-auggie-generation.sh
+
+      - name: Require generated agent output
+        run: |
+          test -f "bench/agents/${BENCH_AGENT_SLUG}.js"
+          node -e "const m=require('./bench/agents.json'); if (!m.agents?.some(a => a.slug === process.env.BENCH_AGENT_SLUG && a.path === 'bench/agents/' + process.env.BENCH_AGENT_SLUG + '.js')) process.exit(1)"
+
+      - name: Save model list with artifacts
+        if: always()
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          cp model-list.txt "$ARTIFACT_DIR/model-list.txt" || true
+
+      - name: Test benchmark runner
+        run: |
+          set -o pipefail
+          mkdir -p "$ARTIFACT_DIR"
+          npm run bench:test | tee "$ARTIFACT_DIR/bench-test.log"
+
+      - name: Validate generated benchmark agents
+        run: |
+          set -o pipefail
+          mkdir -p "$ARTIFACT_DIR"
+          npm run bench:validate | tee "$ARTIFACT_DIR/bench-validate.log"
+
+      - name: Dry-run tournament
+        run: |
+          set -o pipefail
+          npm --silent run bench:run:dry | tee "$ARTIFACT_DIR/bench-run-dry.json"
+          python3 -m json.tool "$ARTIFACT_DIR/bench-run-dry.json" >/dev/null
+
+      - name: Build app
+        run: |
+          set -o pipefail
+          npm run build | tee "$ARTIFACT_DIR/bench-build.log"
+
+      - name: Write generation summary
+        if: always()
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          {
+            echo "# Agent Generation"
+            echo
+            echo "- Agent slug: \`${BENCH_AGENT_SLUG}\`"
+            echo "- Auggie model id: \`${AUGGIE_MODEL}\`"
+            echo "- Artifact: \`generated-agent-${{ github.run_id }}-${{ inputs.agent_slug }}\`"
+            echo "- Prompt: \`${ARTIFACT_DIR}/prompt.md\`"
+            echo "- Transcript: \`${ARTIFACT_DIR}/auggie-transcript.log\`"
+            echo "- Generated agent: \`bench/agents/${BENCH_AGENT_SLUG}.js\`"
+            if [ -f "bench/agents/${BENCH_AGENT_SLUG}.js" ]; then
+              echo "- Source bytes: \`$(wc -c < "bench/agents/${BENCH_AGENT_SLUG}.js")\`"
+            fi
+            echo
+            echo "The artifact contains the prompt, full transcript, generated source, manifest, validation log, and dry-run output."
+          } | tee "$ARTIFACT_DIR/generation-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload prompt, logs, and generated agent
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-agent-${{ github.run_id }}-${{ inputs.agent_slug }}
+          path: |
+            ${{ env.ARTIFACT_DIR }}/**/*
+            bench/agents/${{ inputs.agent_slug }}.js
+            bench/agents.json
+          retention-days: 90

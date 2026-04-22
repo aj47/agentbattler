@@ -49,3 +49,4 @@ temp/
 coverage/
 .playwright-cli/
 artifacts/
+bench/generation/artifacts/
