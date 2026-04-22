@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import latest from "../../bench/results/latest.json";
 import { Panel, Pill } from "../../components/ui";
 import { ConvexArtifactLink } from "./ConvexArtifactLink";
+import { ConvexGenerationArtifacts } from "./ConvexGenerationArtifacts";
 
 type MatchLog = {
   gameId: string;
@@ -192,6 +193,10 @@ export default function BenchPage() {
             ))}
           </div>
         </div>
+      </Panel>
+
+      <Panel label="✦ PUBLIC GENERATION ARTIFACTS" right={<span className="t-label">PROMPT · TRANSCRIPT · SOURCE</span>} style={{ marginTop: 20 }}>
+        <ConvexGenerationArtifacts />
       </Panel>
 
       <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>

@@ -179,4 +179,30 @@ export default defineSchema({
     workflowUrl: v.optional(v.string()),
     runDetailPath: v.optional(v.string()),
   }).index("by_runId", ["runId"]).index("by_uploadedAt", ["uploadedAt"]),
+
+  benchmarkGenerationRuns: defineTable({
+    generationId: v.string(),
+    agentSlug: v.string(),
+    status: v.string(),
+    generatedAt: v.string(),
+    auggieModel: v.string(),
+    timeoutMinutes: v.number(),
+    artifactName: v.string(),
+    storageId: v.id("_storage"),
+    storageSha256: v.string(),
+    storageSizeBytes: v.number(),
+    contentType: v.string(),
+    uploadedAt: v.number(),
+    sourceSizeBytes: v.optional(v.number()),
+    repository: v.optional(v.string()),
+    githubRunId: v.optional(v.string()),
+    githubSha: v.optional(v.string()),
+    githubRef: v.optional(v.string()),
+    workflowUrl: v.optional(v.string()),
+    promptPath: v.optional(v.string()),
+    transcriptPath: v.optional(v.string()),
+    sourcePath: v.optional(v.string()),
+  }).index("by_generationId", ["generationId"])
+    .index("by_agent", ["agentSlug"])
+    .index("by_uploadedAt", ["uploadedAt"]),
 });

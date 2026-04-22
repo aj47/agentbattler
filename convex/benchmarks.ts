@@ -70,3 +70,61 @@ export const recentBenchmarkRuns = query({
     );
   },
 });
+
+export const recordUploadedGeneration = internalMutation({
+  args: {
+    generationId: v.string(),
+    agentSlug: v.string(),
+    status: v.string(),
+    generatedAt: v.string(),
+    auggieModel: v.string(),
+    timeoutMinutes: v.number(),
+    artifactName: v.string(),
+    storageId: v.id("_storage"),
+    storageSha256: v.string(),
+    storageSizeBytes: v.number(),
+    contentType: v.string(),
+    uploadedAt: v.number(),
+    sourceSizeBytes: v.optional(v.number()),
+    repository: v.optional(v.string()),
+    githubRunId: v.optional(v.string()),
+    githubSha: v.optional(v.string()),
+    githubRef: v.optional(v.string()),
+    workflowUrl: v.optional(v.string()),
+    promptPath: v.optional(v.string()),
+    transcriptPath: v.optional(v.string()),
+    sourcePath: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("benchmarkGenerationRuns")
+      .withIndex("by_generationId", (q) => q.eq("generationId", args.generationId))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, args);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("benchmarkGenerationRuns", args);
+  },
+});
+
+export const recentGenerationRuns = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const capped = Math.max(1, Math.min(limit ?? 10, 25));
+    const runs = await ctx.db
+      .query("benchmarkGenerationRuns")
+      .withIndex("by_uploadedAt")
+      .order("desc")
+      .take(capped);
+
+    return await Promise.all(
+      runs.map(async (run) => ({
+        ...run,
+        artifactUrl: await ctx.storage.getUrl(run.storageId),
+      })),
+    );
+  },
+});
