@@ -68,8 +68,16 @@ export const tick = internalMutation({
       });
     }
 
-    // When any match finishes: schedule a server-side reset so the arena recycles
+    // When any match finishes: settle bets, recycle match
     if (result.phase === "finished" && match) {
+      // Settle all open bets for this match
+      if (result.result) {
+        await ctx.scheduler.runAfter(0, internal.simulation.settleBets, {
+          slug,
+          winner: result.result,
+        });
+      }
+
       // Auto-cycle featured status to the next highest-viewer live match
       if (match.status === "featured") {
         await ctx.db.patch(match._id, { status: "live" });
@@ -222,5 +230,50 @@ export const restartFinished = internalMutation({
       restarted++;
     }
     return { restarted };
+  },
+});
+
+// Settle all open bets for a finished match.
+// winner: "b" = agent A (Black) won, "w" = agent B (White) won, "draw" = refund
+export const settleBets = internalMutation({
+  args: { slug: v.string(), winner: v.union(v.literal("b"), v.literal("w"), v.literal("draw")) },
+  handler: async (ctx, { slug, winner }) => {
+    const bets = await ctx.db
+      .query("bets")
+      .withIndex("by_match", q => q.eq("matchSlug", slug))
+      .collect();
+
+    const openBets = bets.filter(b => b.status === "open");
+    if (openBets.length === 0) return;
+
+    for (const bet of openBets) {
+      if (winner === "draw") {
+        // Refund the stake
+        const wallet = await ctx.db
+          .query("wallets")
+          .withIndex("by_user", q => q.eq("userId", bet.userId))
+          .first();
+        if (wallet) {
+          await ctx.db.patch(wallet._id, { balance: wallet.balance + bet.amount });
+        }
+        await ctx.db.patch(bet._id, { status: "void", payout: bet.amount });
+      } else {
+        // "b" wins → side "a" wins; "w" wins → side "b" wins
+        const winningSide: "a" | "b" = winner === "b" ? "a" : "b";
+        if (bet.side === winningSide) {
+          const payout = parseFloat((bet.amount * bet.odds).toFixed(2));
+          const wallet = await ctx.db
+            .query("wallets")
+            .withIndex("by_user", q => q.eq("userId", bet.userId))
+            .first();
+          if (wallet) {
+            await ctx.db.patch(wallet._id, { balance: wallet.balance + payout });
+          }
+          await ctx.db.patch(bet._id, { status: "won", payout });
+        } else {
+          await ctx.db.patch(bet._id, { status: "lost", payout: 0 });
+        }
+      }
+    }
   },
 });
