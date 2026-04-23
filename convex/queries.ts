@@ -4,7 +4,7 @@ import { v } from "convex/values";
 
 export const allAgents = query({
   args: {},
-  handler: async (ctx) => ctx.db.query("agents").collect(),
+  handler: async (ctx) => ctx.db.query("agents").take(200),
 });
 
 export const agentBySlug = query({
@@ -16,8 +16,7 @@ export const agentBySlug = query({
 export const leaderboard = query({
   args: {},
   handler: async (ctx) => {
-    const rows = await ctx.db.query("agents").collect();
-    return rows.sort((a, b) => b.elo - a.elo);
+    return await ctx.db.query("agents").withIndex("by_elo").order("desc").take(200);
   },
 });
 
@@ -28,7 +27,10 @@ export const allGames = query({
 
 export const allMatches = query({
   args: {},
-  handler: async (ctx) => ctx.db.query("matches").collect(),
+  handler: async (ctx) => {
+    const matches = await ctx.db.query("matches").take(500);
+    return matches.sort((a, b) => b.viewers - a.viewers);
+  },
 });
 
 export const matchBySlug = query({
@@ -61,7 +63,7 @@ export const allChatMessages = query({
 export const allTicker = query({
   args: {},
   handler: async (ctx) => {
-    const r = await ctx.db.query("tickerItems").collect();
+    const r = await ctx.db.query("tickerItems").take(50);
     return r.sort((a, b) => a.order - b.order);
   },
 });
@@ -159,19 +161,46 @@ export const allMatchStates = query({
 export const topMatches = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
-    const all = await ctx.db.query("matches").collect();
-    return all
+    const matches = await ctx.db.query("matches").take(500);
+    return matches
       .sort((a, b) => b.viewers - a.viewers)
-      .slice(0, limit ?? 50);
+      .slice(0, Math.max(1, Math.min(limit ?? 50, 100)));
   },
 });
 
-// Cheap count — no documents transferred
-export const totalMatchCount = query({
+export const lobbyData = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("matches").collect();
-    return all.length;
+    const [agents, matches, chat, emojiData] = await Promise.all([
+      ctx.db.query("agents").take(200),
+      ctx.db.query("matches").take(500),
+      ctx.db.query("chatMessages").withIndex("by_order").order("asc").take(60),
+      ctx.db.query("featured").withIndex("by_key", q => q.eq("key", "crowd_emoji")).first(),
+    ]);
+    const topMatches = matches.sort((a, b) => b.viewers - a.viewers).slice(0, 50);
+
+    return {
+      agents,
+      matches: topMatches,
+      leaderboard: [...agents].sort((a, b) => b.elo - a.elo),
+      chat,
+      emojis: emojiData?.data ?? [],
+    };
+  },
+});
+
+export const matchesIndex = query({
+  args: {},
+  handler: async (ctx) => {
+    const matches = (await ctx.db.query("matches").take(500)).sort((a, b) => b.viewers - a.viewers);
+    return {
+      matches,
+      counts: {
+        live: matches.filter(m => m.status === "live" || m.status === "featured").length,
+        starting: matches.filter(m => m.status === "starting").length,
+        total: matches.length,
+      },
+    };
   },
 });
 
@@ -191,15 +220,15 @@ export const bootstrap = query({
   args: {},
   handler: async (ctx) => {
     const [agents, matches, highlights, ticker, leaderboard] = await Promise.all([
-      ctx.db.query("agents").collect(),
-      ctx.db.query("matches").collect(),
-      ctx.db.query("highlights").collect(),
-      ctx.db.query("tickerItems").collect(),
-      ctx.db.query("agents").collect(),
+      ctx.db.query("agents").take(200),
+      ctx.db.query("matches").take(500),
+      ctx.db.query("highlights").take(50),
+      ctx.db.query("tickerItems").take(50),
+      ctx.db.query("agents").withIndex("by_elo").order("desc").take(200),
     ]);
     return {
       agents,
-      matches,
+      matches: matches.sort((a, b) => b.viewers - a.viewers).slice(0, 100),
       highlights: highlights.sort((a,b)=>a.order-b.order),
       ticker: ticker.sort((a,b)=>a.order-b.order).map(t => t.text),
       leaderboard: [...leaderboard].sort((a, b) => b.elo - a.elo),
