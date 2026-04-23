@@ -251,6 +251,13 @@ svg { max-width: 100%; }
 .nav-link { flex: 0 0 auto; padding: 8px 12px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; transition: all 160ms var(--ease-out); }
 .nav-status-row { gap: 12px; justify-content: space-between; flex-wrap: wrap; }
 .nav-live { display: flex; align-items: center; gap: 6px; }
+.nav-arena-cta {
+  color: var(--phos-cyan);
+  border: 1px solid var(--phos-cyan);
+  background: rgba(95,240,230,0.06);
+  box-shadow: 0 0 14px var(--phos-cyan-glow);
+  text-shadow: 0 0 8px var(--phos-cyan-glow);
+}
 .nav-wallet-indicator {
   display: flex;
   align-items: center;

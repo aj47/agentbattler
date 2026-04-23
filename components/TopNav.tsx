@@ -14,7 +14,6 @@ const items = [
   { href: "/match", label: "LIVE MATCH", match: (p: string) => p.startsWith("/match") },
   { href: "/agent", label: "AGENT", match: (p: string) => p.startsWith("/agent") },
   { href: "/bench", label: "BENCH", match: (p: string) => p.startsWith("/bench") },
-  { href: "/match", label: "ENTER ARENA", match: (p: string) => p.startsWith("/match"), cta: true },
 ];
 
 export function TopNav() {
@@ -53,12 +52,12 @@ export function TopNav() {
               const active = i.match(pathname || "/");
               return (
                 <Link key={i.href} href={i.href} className="nav-link" style={{
-                  color: i.cta || active ? "var(--phos-cyan)" : "var(--ink-300)",
-                  border: i.cta ? "1px solid var(--phos-cyan)" : "none",
-                  borderBottom: i.cta ? "1px solid var(--phos-cyan)" : `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
-                  background: i.cta ? "rgba(95,240,230,0.06)" : "transparent",
-                  boxShadow: i.cta ? "0 0 14px var(--phos-cyan-glow)" : "none",
-                  textShadow: i.cta || active ? "0 0 8px var(--phos-cyan-glow)" : "none",
+                  color: active ? "var(--phos-cyan)" : "var(--ink-300)",
+                  border: "none",
+                  borderBottom: `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
+                  background: "transparent",
+                  boxShadow: "none",
+                  textShadow: active ? "0 0 8px var(--phos-cyan-glow)" : "none",
                 }}>{i.label}</Link>
               );
             })}
@@ -66,6 +65,10 @@ export function TopNav() {
         </div>
 
         <div className="nav-status-row">
+          <Link href="/match" className="nav-link nav-arena-cta">
+            ENTER ARENA
+          </Link>
+
           {me ? (
             <div style={{ position: "relative" }}>
               <button
