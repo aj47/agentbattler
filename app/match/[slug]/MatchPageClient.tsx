@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -8,36 +8,55 @@ import { Panel, LiveDot, Pill, AgentCard } from "../../../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../../../components/boards";
 import { LiveChat } from "../../../components/LiveChat";
 import { boardToStones } from "../../../lib/games/index";
-import type { Agent, Match, ChatMessage } from "../../../lib/types";
+import type { Match, ChatMessage } from "../../../lib/types";
 import type { GoBoard } from "../../../lib/games/go";
 import type { ChessBoard } from "../../../lib/games/chess";
 import type { CheckersDisc } from "../../../lib/games/checkers";
 
+function FloatingEmojiLayer({ emojis }: { emojis: string[] }) {
+  const [emojiStream, setEmojiStream] = useState<{ e: string; id: number; x: number; dur: number }[]>([]);
+
+  useEffect(() => {
+    if (emojis.length === 0) return;
+    const id = setInterval(() => {
+      setEmojiStream(prev => {
+        const e = emojis[Math.floor(Math.random() * emojis.length)];
+        return [...prev, { e, id: Math.random(), x: 10 + Math.random() * 80, dur: 2.2 + Math.random() * 1.5 }].slice(-10);
+      });
+    }, 700);
+    return () => clearInterval(id);
+  }, [emojis]);
+
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
+      {emojiStream.map(e => (
+        <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: "clamp(18px, 5vw, 26px)", animation: `floatUp ${e.dur}s linear forwards`, filter: "drop-shadow(0 0 4px rgba(0,0,0,0.8))" }}>
+          {e.e}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function MatchPageClient({ slug }: { slug: string }) {
-  const match = useQuery(api.queries.matchBySlug, { slug });
-  const agents = useQuery(api.queries.allAgents);
-  const state = useQuery(api.queries.matchState, { slug });
-  const chat = useQuery(api.queries.allChatMessages);
-  const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
+  const arena = useQuery(api.queries.arenaData, { slug });
+  const match = arena?.match;
+  const a = arena?.agentA;
+  const b = arena?.agentB;
+  const state = arena?.state;
+  const chat = arena?.chat;
+  const emojis = arena?.emojis as string[] | null | undefined;
+  const currentUser = arena?.currentUser;
+  const matchBets = arena?.bets;
   const initMatch = useMutation(api.mutations.initMatchState);
   const placeBetMutation = useMutation(api.mutations.placeBet);
   const sendChatMessage = useMutation(api.mutations.sendChatMessage);
   const { isAuthenticated } = useConvexAuth();
-  const currentUser = useQuery(api.queries.currentUser);
-  const matchBets = useQuery(api.queries.matchBets, { matchSlug: slug });
   const [modalOpen, setModalOpen] = useState(false);
   const [betSide, setBetSide] = useState<"a" | "b" | null>(null);
   const [betAmount, setBetAmount] = useState(500);
   const [betStatus, setBetStatus] = useState<"idle" | "placing" | "done" | "error">("idle");
   const [betError, setBetError] = useState("");
-
-  const agentMap = useMemo(() => {
-    const m = new Map<string, Agent>();
-    (agents || []).forEach(a => m.set(a.slug, a as Agent));
-    return m;
-  }, [agents]);
-
-  const [emojiStream, setEmojiStream] = useState<{ e: string; id: number; x: number; dur: number }[]>([]);
 
   // Start simulation if not yet initialised
   useEffect(() => {
@@ -47,25 +66,13 @@ export default function MatchPageClient({ slug }: { slug: string }) {
     }
   }, [state, match, slug, initMatch]);
 
-  useEffect(() => {
-    if (!emojis || emojis.length === 0) return;
-    const id = setInterval(() => {
-      setEmojiStream(prev => {
-        const e = emojis[Math.floor(Math.random() * emojis.length)];
-        return [...prev, { e, id: Math.random(), x: 10 + Math.random() * 80, dur: 2.2 + Math.random() * 1.5 }].slice(-15);
-      });
-    }, 380);
-    return () => clearInterval(id);
-  }, [emojis]);
-
   const handleChatSend = useCallback(async (msg: string) => {
     await sendChatMessage({ msg });
   }, [sendChatMessage]);
 
-  if (!match || !agents) return <div style={{ padding: 40 }}>LOADING…</div>;
+  if (!arena) return <div style={{ padding: 40 }}>LOADING…</div>;
+  if (!match) return <div style={{ padding: 40 }}>Match not found.</div>;
   const m = match as Match;
-  const a = agentMap.get(m.a);
-  const b = agentMap.get(m.b);
   if (!a || !b) return <div style={{ padding: 40 }}>Agent not found.</div>;
   const chatUserName = currentUser
     ? ((currentUser as any).name ?? (currentUser as any).email?.split("@")[0] ?? "SPECTATOR")
@@ -443,13 +450,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
 
             {boardEl}
 
-            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-              {emojiStream.map(e => (
-                <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: "clamp(18px, 5vw, 26px)", animation: `floatUp ${e.dur}s linear forwards`, filter: "drop-shadow(0 0 4px rgba(0,0,0,0.8))" }}>
-                  {e.e}
-                </span>
-              ))}
-            </div>
+            <FloatingEmojiLayer emojis={emojis || []} />
 
             <div style={{ position: "absolute", top: 16, left: 20, padding: "6px 10px", background: "rgba(5,7,13,0.75)", border: "1px solid var(--line-bright)", fontFamily: "var(--font-mono)", fontSize: 11 }}>
               <span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>MOVE </span>
