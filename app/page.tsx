@@ -280,13 +280,33 @@ export default function LobbyPage() {
         {/* Left: featured match panel */}
         <Panel className="lobby-feature-panel" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
+          {/* Stats strip */}
+          <div className="lobby-stats-strip" style={{
+            padding: "9px clamp(14px, 4vw, 22px)", flexShrink: 0,
+            minHeight: 40,
+            borderBottom: "1px solid var(--line)",
+            background: "rgba(5,7,13,0.4)",
+          }}>
+            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", flexWrap: "wrap" }}>
+              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>B · BLACK</span>
+              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{featuredState ? (game === "go19" ? (winProbB * 1.8).toFixed(1) : featuredState.capturesB) : "—"}</span></span>
+              <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesB ?? 0}</span></span>
+            </div>
+            <span className="t-label" style={{ color: "var(--ink-400)" }}>{(featuredState?.phase ?? featured.phase).toUpperCase()} · MV {moveCount}</span>
+            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesW ?? 0}</span></span>
+              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-amber)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
+              <span className="t-label" style={{ color: "var(--phos-amber)" }}>W · WHITE</span>
+            </div>
+          </div>
+
           {/* Agent cards */}
           <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
             {featA && <AgentCard agent={featA} side="L" sideMarker="B" />}
             {featB && <AgentCard agent={featB} side="R" sideMarker="W" />}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", padding: "10px clamp(12px, 4vw, 24px) 0", flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "center", padding: "12px clamp(12px, 4vw, 24px) 4px", flexShrink: 0 }}>
             <button
               onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }}
               className="btn featured-bet-cta"
@@ -304,25 +324,6 @@ export default function LobbyPage() {
               </span>
               <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>{winProbW}%</span>
             </button>
-          </div>
-
-          {/* Stats strip */}
-          <div className="lobby-stats-strip" style={{
-            padding: "6px clamp(12px, 4vw, 20px)", flexShrink: 0,
-            borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)",
-            background: "rgba(5,7,13,0.4)",
-          }}>
-            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", flexWrap: "wrap" }}>
-              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>B · BLACK</span>
-              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{featuredState ? (game === "go19" ? (winProbB * 1.8).toFixed(1) : featuredState.capturesB) : "—"}</span></span>
-              <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesB ?? 0}</span></span>
-            </div>
-            <span className="t-label" style={{ color: "var(--ink-400)" }}>{(featuredState?.phase ?? featured.phase).toUpperCase()} · MV {moveCount}</span>
-            <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end", flexWrap: "wrap" }}>
-              <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesW ?? 0}</span></span>
-              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-amber)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
-              <span className="t-label" style={{ color: "var(--phos-amber)" }}>W · WHITE</span>
-            </div>
           </div>
 
           {/* Board — fills all remaining space */}

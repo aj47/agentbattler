@@ -66,34 +66,25 @@ export function TopNav() {
         </div>
 
         <div className="nav-status-row">
-          <button
-            type="button"
-            onClick={() => me ? setShowUserMenu(v => !v) : setShowAuth(true)}
-            className="nav-wallet-indicator"
-          >
-            <span style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: me ? "var(--phos-green)" : "var(--phos-amber)",
-              boxShadow: me ? "0 0 6px var(--phos-green)" : "0 0 6px var(--phos-amber)",
-            }} />
-            <span className="t-label">{walletLabel}</span>
-          </button>
-
           {me ? (
             <div style={{ position: "relative" }}>
-              <button onClick={() => setShowUserMenu(v => !v)} style={{
-                display: "flex", alignItems: "center", gap: 8,
-                background: "var(--bg-panel)", border: "1px solid var(--line)",
-                padding: "6px 12px", cursor: "pointer",
-              }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--phos-green)", boxShadow: "0 0 6px var(--phos-green)" }} />
+              <button
+                type="button"
+                onClick={() => setShowUserMenu(v => !v)}
+                className="nav-wallet-indicator"
+              >
+                <span style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: "var(--phos-green)",
+                  boxShadow: "0 0 6px var(--phos-green)",
+                }} />
                 <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)" }}>
                   {(me as any).name ?? (me as any).email?.split("@")[0] ?? "ACCOUNT"}
                 </span>
-                <span className="t-num" style={{ fontSize: 11, color: "var(--phos-cyan)" }}>
-                  ${((me as any).balance ?? 0).toLocaleString()}
+                <span className="t-label">
+                  {walletLabel}
                 </span>
               </button>
               {showUserMenu && (
@@ -122,8 +113,19 @@ export function TopNav() {
               )}
             </div>
           ) : (
-            <button onClick={() => setShowAuth(true)} className="btn primary">
-              SIGN IN / REGISTER
+            <button
+              type="button"
+              onClick={() => setShowAuth(true)}
+              className="nav-wallet-indicator"
+            >
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: 999,
+                background: "var(--phos-amber)",
+                boxShadow: "0 0 6px var(--phos-amber)",
+              }} />
+              <span className="t-label">{walletLabel}</span>
             </button>
           )}
         </div>
