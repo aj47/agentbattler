@@ -280,22 +280,10 @@ export default function LobbyPage() {
         {/* Left: featured match panel */}
         <Panel className="lobby-feature-panel" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-          {/* Header */}
-          <div className="responsive-toolbar" style={{
-            padding: "10px 16px", borderBottom: "1px solid var(--line)", flexShrink: 0,
-            alignItems: "stretch",
-            background: "linear-gradient(90deg, rgba(95,240,230,0.08), transparent 40%, rgba(255,181,71,0.08))",
-          }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <LiveDot />
-                <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE FEATURE</span>
-                <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: 14, flexWrap: "wrap" }}>
-              <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
-            </div>
+          {/* Agent cards */}
+          <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
+            {featA && <AgentCard agent={featA} side="L" sideMarker="B" />}
+            {featB && <AgentCard agent={featB} side="R" sideMarker="W" />}
           </div>
 
           <div style={{ display: "flex", justifyContent: "center", padding: "10px clamp(12px, 4vw, 24px) 0", flexShrink: 0 }}>
@@ -316,12 +304,6 @@ export default function LobbyPage() {
               </span>
               <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>{winProbW}%</span>
             </button>
-          </div>
-
-          {/* Agent cards */}
-          <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
-            {featA && <AgentCard agent={featA} side="L" sideMarker="B" />}
-            {featB && <AgentCard agent={featB} side="R" sideMarker="W" />}
           </div>
 
           {/* Stats strip */}
