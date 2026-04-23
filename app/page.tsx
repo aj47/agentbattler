@@ -15,6 +15,17 @@ import type { GoBoard } from "../lib/games/go";
 import type { ChessBoard } from "../lib/games/chess";
 import type { CheckersDisc } from "../lib/games/checkers";
 
+type AgentInterestStory = {
+  key: string;
+  label: string;
+  headline: string;
+  detail: string;
+  stat: string;
+  agent: Agent;
+  opponent?: Agent;
+  href: string;
+};
+
 export default function LobbyPage() {
   const agents    = useQuery(api.queries.allAgents);
   const matches   = useQuery(api.queries.topMatches, { limit: 50 });
@@ -113,6 +124,95 @@ export default function LobbyPage() {
       .sort((a, b) => b.earnings - a.earnings)
       .slice(0, 5);
   }, [leaderboard]);
+
+  const agentInterestStories = useMemo<AgentInterestStory[]>(() => {
+    const board = ((leaderboard as Agent[] | undefined) ?? []);
+    const ms = ((matches as Match[] | undefined) ?? []);
+    const stories: AgentInterestStory[] = [];
+    const seen = new Set<string>();
+
+    const pushStory = (story: AgentInterestStory | null | undefined) => {
+      if (!story || seen.has(story.key)) return;
+      seen.add(story.key);
+      stories.push(story);
+    };
+
+    const topMoney = board
+      .map(enrichAgent)
+      .sort((a, b) => b.earnings - a.earnings)[0];
+    pushStory(topMoney && {
+      key: `money-${topMoney.slug}`,
+      label: "BIG WIN",
+      headline: `${topMoney.handle} owns the richest book`,
+      detail: `${topMoney.wins}W-${topMoney.loss}L with the bankroll still climbing.`,
+      stat: money(topMoney.earnings),
+      agent: topMoney,
+      href: `/agent/${topMoney.slug}`,
+    });
+
+    const heater = [...board]
+      .filter(a => a.streak > 0)
+      .sort((a, b) => b.streak - a.streak || b.elo - a.elo)[0];
+    pushStory(heater && {
+      key: `heater-${heater.slug}`,
+      label: "HEATER",
+      headline: `${heater.handle} is stacking wins`,
+      detail: `${heater.streak}-match streak with pressure building across the board.`,
+      stat: `+${heater.streak}`,
+      agent: heater,
+      href: `/agent/${heater.slug}`,
+    });
+
+    const hotAgent = [...board]
+      .filter(a => a.hot)
+      .sort((a, b) => b.elo - a.elo)[0];
+    pushStory(hotAgent && {
+      key: `hot-${hotAgent.slug}`,
+      label: "MARKET MOVE",
+      headline: `${hotAgent.handle} is drawing sharp money`,
+      detail: `${hotAgent.elo} ELO, ${hotAgent.size.toFixed(1)}kb stack, hot tag active.`,
+      stat: "HOT",
+      agent: hotAgent,
+      href: `/agent/${hotAgent.slug}`,
+    });
+
+    const upsetMatch = ms
+      .map(m => {
+        const a = agentMap.get(m.a);
+        const b = agentMap.get(m.b);
+        if (!a || !b) return null;
+        const favorite = a.elo >= b.elo ? a : b;
+        const underdog = a.elo >= b.elo ? b : a;
+        return { match: m, favorite, underdog, gap: favorite.elo - underdog.elo };
+      })
+      .filter((item): item is NonNullable<typeof item> => !!item && item.gap >= 80)
+      .sort((a, b) => b.gap - a.gap || b.match.viewers - a.match.viewers)[0];
+    pushStory(upsetMatch && {
+      key: `upset-${upsetMatch.match.slug}`,
+      label: "UPSET WATCH",
+      headline: `${upsetMatch.underdog.handle} gets a giant shot`,
+      detail: `${upsetMatch.gap} ELO gap against ${upsetMatch.favorite.handle} in a live arena.`,
+      stat: `${upsetMatch.gap}`,
+      agent: upsetMatch.underdog,
+      opponent: upsetMatch.favorite,
+      href: `/match/${upsetMatch.match.slug}`,
+    });
+
+    for (const agent of board) {
+      if (stories.length >= 4) break;
+      pushStory({
+        key: `rank-${agent.slug}`,
+        label: "RANK MOVE",
+        headline: `${agent.handle} is live on the board`,
+        detail: `${agent.wins}W-${agent.loss}L, ${agent.elo} ELO, ${agent.personality}`,
+        stat: `${agent.elo}`,
+        agent,
+        href: `/agent/${agent.slug}`,
+      });
+    }
+
+    return stories.slice(0, 4);
+  }, [leaderboard, matches, agentMap]);
 
   // Measure the board container so we can size the board to fill it exactly.
   // Use a callback ref so the observer is set up as soon as the element mounts,
@@ -348,9 +448,55 @@ export default function LobbyPage() {
         {/* Right sidebar */}
         <div className="stack lobby-sidebar">
           <Panel
+            label="AGENT INTEREST"
+            right={<span className="t-label" style={{ fontSize: 9 }}>LIVE WIRE</span>}
+            className="agent-interest-panel"
+          >
+            <div className="agent-interest-stage">
+              {agentInterestStories.map((story, i) => {
+                const c = `var(--phos-${story.agent.color})`;
+                return (
+                  <Link
+                    key={story.key}
+                    href={story.href}
+                    className="agent-interest-card"
+                    style={{
+                      ["--agent-accent" as string]: c,
+                      animationDelay: `${i * 4.5}s`,
+                    }}
+                  >
+                    <div className="agent-interest-glow" />
+                    <div className="agent-interest-topline">
+                      <span className="t-label">{story.label}</span>
+                      <span className="t-num">{story.stat}</span>
+                    </div>
+                    <div className="agent-interest-hero">
+                      <AgentGlyph agent={story.agent} size={74} />
+                      <div className="agent-interest-copy">
+                        <div className="t-display agent-interest-headline">{story.headline}</div>
+                        <div className="agent-interest-detail">{story.detail}</div>
+                      </div>
+                    </div>
+                    {story.opponent && (
+                      <div className="agent-interest-versus">
+                        <span className="t-label">TARGET</span>
+                        <span className="t-mono">{story.opponent.handle}</span>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="agent-interest-dots" aria-hidden="true">
+              {agentInterestStories.map(story => <span key={story.key} />)}
+            </div>
+          </Panel>
+
+          <Panel
             label="◐ LIVE CHAT"
             right={<span className="t-label" style={{ fontSize: 9 }}>{featured.viewers.toLocaleString()} ONLINE</span>}
-            style={{ flex: 1, minHeight: 420, display: "flex", flexDirection: "column", overflow: "hidden" }}
+            className="lobby-chat-panel"
+            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
           >
             <div style={{ flex: 1, minHeight: 0 }}>
               <LiveChat
