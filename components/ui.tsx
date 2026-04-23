@@ -97,43 +97,37 @@ export function AgentCard({
 }) {
   const c = `var(--phos-${agent.color})`;
   const sideMark = sideMarker ?? (score === "B" || score === "W" ? score : null);
-  const sideRing = sideMark === "B"
+  const sideFrame = sideMark === "B"
     ? {
       border: "#05070d",
-      inset: "rgba(0,0,0,0.82)",
-      glow: "rgba(255,181,71,0.34)",
+      glow: "rgba(0,0,0,0.58)",
+      inset: "rgba(255,181,71,0.22)",
+      background: "linear-gradient(90deg, rgba(0,0,0,0.42), rgba(15,20,34,0.88))",
     }
     : sideMark === "W"
       ? {
         border: "var(--ink-100)",
-        inset: "rgba(255,255,255,0.26)",
-        glow: "rgba(255,255,255,0.42)",
+        glow: "rgba(255,255,255,0.32)",
+        inset: "rgba(255,255,255,0.2)",
+        background: "linear-gradient(270deg, rgba(255,255,255,0.11), rgba(15,20,34,0.88))",
       }
       : null;
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
       padding: compact ? "10px 12px" : "14px 16px",
-      background: active ? "rgba(95,240,230,0.04)" : "var(--bg-panel)",
-      border: `1px solid ${active ? c : "var(--line)"}`,
+      background: sideFrame?.background ?? (active ? "rgba(95,240,230,0.04)" : "var(--bg-panel)"),
+      border: `1px solid ${sideFrame?.border ?? (active ? c : "var(--line)")}`,
+      borderRadius: sideFrame ? 8 : 0,
+      boxShadow: sideFrame
+        ? `0 0 0 1px ${sideFrame.inset}, 0 0 18px ${sideFrame.glow}, inset 0 0 18px rgba(5,7,13,0.38)`
+        : undefined,
       position: "relative",
       flexDirection: side === "R" ? "row-reverse" : "row",
       textAlign: side === "R" ? "right" : "left",
     }}>
       <div style={{ position: "relative", flexShrink: 0 }}>
-        {sideRing ? (
-          <div style={{
-            borderRadius: "50%",
-            padding: compact ? 4 : 5,
-            border: `2px solid ${sideRing.border}`,
-            boxShadow: `0 0 0 1px ${sideRing.inset}, 0 0 18px ${sideRing.glow}`,
-            background: "rgba(5,7,13,0.5)",
-          }}>
-            <AgentGlyph agent={agent} size={compact ? 40 : 54} />
-          </div>
-        ) : (
-          <AgentGlyph agent={agent} size={compact ? 40 : 54} />
-        )}
+        <AgentGlyph agent={agent} size={compact ? 40 : 54} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "baseline", flexDirection: side === "R" ? "row-reverse" : "row", flexWrap: "wrap" }}>
@@ -153,7 +147,7 @@ export function AgentCard({
           </div>
         )}
       </div>
-      {score !== undefined && !sideRing && (
+      {score !== undefined && !sideFrame && (
         <div style={{
           fontFamily: "var(--font-display)", fontSize: compact ? 24 : 36,
           fontWeight: 700, color: c, textShadow: `0 0 14px ${c}`,

@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../convex/_generated/api";
-import { LiveDot } from "./ui";
 import { AuthModal } from "./AuthModal";
-import type { Match } from "../lib/types";
 
 const items = [
   { href: "/", label: "LOBBY", match: (p: string) => p === "/" },
@@ -25,21 +23,10 @@ export function TopNav() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { signOut } = useAuthActions();
   const me = useQuery(api.queries.currentUser);
-  const pulseMatches = useQuery(api.queries.topMatches, { limit: 50 });
-  const pulse = useMemo(() => {
-    if (!pulseMatches) {
-      return { live: "LIVE SYNCING", spectators: "SPECTATORS SYNCING" };
-    }
-
-    const matches = pulseMatches as Match[];
-    const liveCount = matches.filter(m => m.status === "live" || m.status === "featured").length;
-    const viewerCount = matches.reduce((sum, m) => sum + m.viewers, 0);
-
-    return {
-      live: `${liveCount.toLocaleString()} ${liveCount === 1 ? "MATCH" : "MATCHES"} LIVE`,
-      spectators: `${viewerCount.toLocaleString()} SPECTATORS`,
-    };
-  }, [pulseMatches]);
+  const walletBalance = (me as any)?.balance ?? 0;
+  const walletLabel = me
+    ? `WALLET: $${walletBalance.toLocaleString()}`
+    : "WALLET: LOGIN";
 
   return (
     <>
@@ -79,11 +66,20 @@ export function TopNav() {
         </div>
 
         <div className="nav-status-row">
-          <div className="nav-live">
-            <LiveDot />
-            <span className="t-label" style={{ color: "var(--phos-green)" }}>{pulse.live}</span>
-          </div>
-          <span className="t-label nav-spectators">{pulse.spectators}</span>
+          <button
+            type="button"
+            onClick={() => me ? setShowUserMenu(v => !v) : setShowAuth(true)}
+            className="nav-wallet-indicator"
+          >
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: 999,
+              background: me ? "var(--phos-green)" : "var(--phos-amber)",
+              boxShadow: me ? "0 0 6px var(--phos-green)" : "0 0 6px var(--phos-amber)",
+            }} />
+            <span className="t-label">{walletLabel}</span>
+          </button>
 
           {me ? (
             <div style={{ position: "relative" }}>
