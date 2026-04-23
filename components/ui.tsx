@@ -3,6 +3,51 @@
 import { CSSProperties, ReactNode } from "react";
 import type { Agent } from "../lib/types";
 
+function pct(wins: number, loss: number) {
+  const total = wins + loss;
+  return total > 0 ? Math.round((wins / total) * 100) : 0;
+}
+
+function architectureNote(agent: Agent) {
+  if (agent.size >= 45) return `${agent.size.toFixed(1)}kb heavyweight build`;
+  if (agent.size <= 20) return `${agent.size.toFixed(1)}kb micro-build, speed first`;
+  return `${agent.size.toFixed(1)}kb midweight stack`;
+}
+
+function strategyNote(agent: Agent) {
+  const text = `${agent.personality} ${agent.bio}`.toLowerCase();
+  if (text.includes("queen")) return "queen pressure stays live deep into middlegame";
+  if (text.includes("rook")) return "rook lifts are part of the gameplan";
+  if (text.includes("endgame") || text.includes("tablebase")) return "gets stronger after trades come off";
+  if (text.includes("opening") || text.includes("book")) return "opening prep is a real edge early";
+  if (text.includes("aggressive") || text.includes("sacrific") || text.includes("rush") || text.includes("invasion")) return "fast-start profile, high early volatility";
+  if (text.includes("defensive") || text.includes("fortress") || text.includes("territor") || text.includes("patience")) return "grinds edges and protects the lead";
+  if (text.includes("random") || text.includes("chaos") || text.includes("unorthodox")) return "high-variance lines keep bettors guessing";
+  return agent.personality;
+}
+
+function buildAgentNotes(agent: Agent) {
+  const winRate = pct(agent.wins, agent.loss);
+  const notes = [
+    `${winRate}% win rate on ${agent.wins}W-${agent.loss}L`,
+    architectureNote(agent),
+    strategyNote(agent),
+  ];
+
+  if (agent.streak >= 3) notes.push(`on a ${agent.streak}-match heater`);
+  else if (agent.streak > 0) notes.push(`quiet ${agent.streak}-match uptick`);
+  else if (agent.streak <= -3) notes.push(`trying to snap a ${Math.abs(agent.streak)}-match skid`);
+
+  if (agent.hot) notes.push("market favorite and taking sharp money");
+
+  if (agent.bio) {
+    const bioLine = agent.bio.replace(/\.+$/g, "").trim();
+    if (bioLine) notes.push(bioLine);
+  }
+
+  return notes.slice(0, 5);
+}
+
 export function Panel({
   children, style, label, right, className = "", noCorners = false,
 }: {
@@ -144,8 +189,18 @@ export function AgentCard({
           <span className="t-label" style={{ fontSize: 9 }}>{agent.author}</span>
         </div>
         {!compact && (
-          <div style={{ marginTop: 6, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)", fontStyle: "italic" }}>
-            // {agent.personality}
+          <div className={`agent-note-marquee ${side === "R" ? "right" : ""}`} style={{ marginTop: 8 }}>
+            <div className="agent-note-track">
+              {[0, 1].map(group => (
+                <div key={group} className="agent-note-group" aria-hidden={group === 1}>
+                  {buildAgentNotes(agent).map((note, i) => (
+                    <span key={`${group}-${i}`} className="agent-note-chip">
+                      {note}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
