@@ -305,7 +305,7 @@ svg { max-width: 100%; }
 .lobby-stats-strip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .lobby-stats-strip > .t-label { text-align: left; }
 .stack { display: flex; flex-direction: column; gap: var(--gap-md); min-width: 0; }
-.featured-agent-grid { gap: var(--gap-sm); padding: 12px clamp(12px, 4vw, 24px) 6px; }
+.featured-agent-grid { gap: var(--gap-sm); padding: 18px clamp(14px, 4vw, 26px) 10px; }
 .featured-board-grid { gap: var(--gap-md); padding: 10px clamp(12px, 4vw, 24px) 20px; align-items: start; }
 .featured-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; text-align: left; }
 .match-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px; }
