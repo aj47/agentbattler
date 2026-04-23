@@ -717,6 +717,20 @@ svg { max-width: 100%; }
     0 0 22px rgba(255, 181, 71, 0.32),
     inset 0 0 24px rgba(5, 7, 13, 0.38);
 }
+.lobby-strip-bet-cta {
+  width: min(100%, 310px);
+  min-height: 28px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 10px;
+  color: var(--ink-100);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  border-radius: 6px;
+}
+.lobby-strip-bet-cta .t-num {
+  font-size: 10px;
+}
 .match-canvas-kicker {
   display: flex;
   align-items: center;

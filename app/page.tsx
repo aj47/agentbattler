@@ -392,7 +392,17 @@ export default function LobbyPage() {
               <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{featuredState ? (game === "go19" ? (winProbB * 1.8).toFixed(1) : featuredState.capturesB) : "—"}</span></span>
               <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesB ?? 0}</span></span>
             </div>
-            <span className="t-label" style={{ color: "var(--ink-400)" }}>{(featuredState?.phase ?? featured.phase).toUpperCase()} · MV {moveCount}</span>
+            <button
+              onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }}
+              className="btn featured-bet-cta lobby-strip-bet-cta"
+              style={{
+                background: `linear-gradient(90deg, rgba(95,240,230,0.18) 0%, rgba(95,240,230,0.18) ${winProbB}%, rgba(255,181,71,0.18) ${winProbB}%, rgba(255,181,71,0.18) 100%)`,
+              }}
+            >
+              <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{winProbB}%</span>
+              <span>BET ON THIS MATCH NOW</span>
+              <span className="t-num" style={{ color: "var(--phos-amber)" }}>{winProbW}%</span>
+            </button>
             <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end", flexWrap: "wrap" }}>
               <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesW ?? 0}</span></span>
               <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-amber)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
@@ -404,26 +414,6 @@ export default function LobbyPage() {
           <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
             {featA && <AgentCard agent={featA} side="L" sideMarker="B" />}
             {featB && <AgentCard agent={featB} side="R" sideMarker="W" />}
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "center", padding: "12px clamp(12px, 4vw, 24px) 4px", flexShrink: 0 }}>
-            <button
-              onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }}
-              className="btn featured-bet-cta"
-              style={{
-                width: "min(100%, 560px)",
-                minHeight: 44,
-                justifyContent: "space-between",
-                color: "var(--ink-100)",
-                background: `linear-gradient(90deg, rgba(95,240,230,0.20) 0%, rgba(95,240,230,0.20) ${winProbB}%, rgba(255,181,71,0.20) ${winProbB}%, rgba(255,181,71,0.20) 100%)`,
-              }}
-            >
-              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>{winProbB}%</span>
-              <span className="t-label" style={{ color: "var(--ink-100)", fontSize: 10, letterSpacing: "0.14em" }}>
-                BET ON THIS MATCH NOW!
-              </span>
-              <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>{winProbW}%</span>
-            </button>
           </div>
 
           {/* Board — fills all remaining space */}
