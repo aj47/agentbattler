@@ -465,7 +465,7 @@ export default function LobbyPage() {
                     className="agent-interest-card"
                     style={{
                       ["--agent-accent" as string]: c,
-                      animationDelay: `${i * 4.5}s`,
+                      animationDelay: `${i * 9}s`,
                     }}
                   >
                     <div className="agent-interest-glow" />
@@ -477,7 +477,9 @@ export default function LobbyPage() {
                       </span>
                     </div>
                     <div className="agent-interest-hero">
-                      <AgentGlyph agent={story.agent} size={74} />
+                      <div className="agent-interest-avatar" style={{ animationDelay: `${i * 9}s` }}>
+                        <AgentGlyph agent={story.agent} size={74} />
+                      </div>
                       <div className="agent-interest-copy">
                         <div className="t-display agent-interest-headline">{story.headline}</div>
                         <div className="agent-interest-detail">{story.detail}</div>
