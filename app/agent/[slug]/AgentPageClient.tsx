@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Panel, Pill, AgentGlyph } from "../../../components/ui";
 import type { Agent, ProfileMatch, ProfilePnl } from "../../../lib/types";
+import type { AgentProfilePrefill } from "../../../lib/agentPrefill";
 
 function fmt$(n: number) {
   const s = n < 0 ? "-" : "";
@@ -52,16 +53,18 @@ function PnlChart({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-export default function AgentPageClient({ slug }: { slug: string }) {
+export default function AgentPageClient({ slug, initialProfile }: { slug: string; initialProfile?: AgentProfilePrefill | null }) {
   const profile = useQuery(api.queries.agentProfileData, { slug });
+  const visibleProfile = profile ?? initialProfile;
+  const isPrefilled = !profile && !!initialProfile;
 
-  if (!profile) return <div style={{ padding: 40 }}>LOADING…</div>;
-  if (!profile.agent) return <div style={{ padding: 40 }}>Agent not found.</div>;
+  if (!visibleProfile) return <div style={{ padding: 40 }}>LOADING…</div>;
+  if (!visibleProfile.agent) return <div style={{ padding: 40 }}>Agent not found.</div>;
 
-  const a = profile.agent as Agent;
-  const rank = profile.rank;
-  const matches = profile.matches as (ProfileMatch & { opponent: Agent | null })[];
-  const pnl = profile.pnl as ProfilePnl | null;
+  const a = visibleProfile.agent as Agent;
+  const rank = visibleProfile.rank;
+  const matches = visibleProfile.matches as (ProfileMatch & { opponent: Agent | null })[];
+  const pnl = visibleProfile.pnl as ProfilePnl | null;
   const color = `var(--phos-${a.color})`;
   const winrate = Math.round((a.wins / (a.wins + a.loss)) * 100);
 
@@ -73,6 +76,12 @@ export default function AgentPageClient({ slug }: { slug: string }) {
         <Link href="/bracket">BRACKET</Link>
         <span style={{ color: "var(--ink-400)" }}>/</span>
         <span style={{ color }}>AGENT · {a.handle}</span>
+        {isPrefilled && (
+          <>
+            <span style={{ color: "var(--ink-400)" }}>/</span>
+            <span style={{ color: "var(--ink-400)" }}>SYNCING LIVE DATA</span>
+          </>
+        )}
       </div>
 
       <Panel>
