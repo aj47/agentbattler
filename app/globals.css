@@ -191,6 +191,10 @@ svg { max-width: 100%; }
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+@keyframes agentNoteScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
 @keyframes floatUp {
   0% { transform: translateY(0) scale(0.6); opacity: 0; }
   15% { opacity: 0.9; }
@@ -206,6 +210,66 @@ svg { max-width: 100%; }
   transform: translateY(-2px);
   border-color: var(--phos-cyan) !important;
   box-shadow: 0 0 18px var(--phos-cyan-glow);
+}
+
+.agent-note-marquee {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 16px;
+  padding-top: 1px;
+  mask-image: linear-gradient(90deg, transparent, black 7%, black 93%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 7%, black 93%, transparent);
+}
+
+.agent-note-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: agentNoteScroll 34s linear infinite;
+  will-change: transform;
+}
+
+.agent-note-marquee.right .agent-note-track {
+  animation-direction: reverse;
+}
+
+.agent-note-marquee:hover .agent-note-track {
+  animation-play-state: paused;
+}
+
+.agent-note-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding-right: 12px;
+}
+
+.agent-note-chip {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink-200) 88%, var(--phos-cyan) 12%);
+  text-shadow: 0 0 10px rgba(95, 240, 230, 0.14);
+}
+
+.agent-note-chip::before {
+  content: "•";
+  margin-right: 8px;
+  color: color-mix(in srgb, var(--phos-amber) 78%, white 22%);
+  text-shadow: 0 0 10px rgba(255, 181, 71, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-note-track {
+    animation: none;
+  }
 }
 
 .app-frame {
