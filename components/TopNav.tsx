@@ -48,6 +48,9 @@ export function TopNav() {
           <div className="nav-divider" />
 
           <nav className="nav-items" aria-label="Primary navigation">
+            <Link href="/match" className="nav-link nav-arena-cta">
+              ENTER ARENA
+            </Link>
             {items.map(i => {
               const active = i.match(pathname || "/");
               return (
@@ -65,10 +68,6 @@ export function TopNav() {
         </div>
 
         <div className="nav-status-row">
-          <Link href="/match" className="nav-link nav-arena-cta">
-            ENTER ARENA
-          </Link>
-
           {me ? (
             <div style={{ position: "relative" }}>
               <button
