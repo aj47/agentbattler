@@ -7,7 +7,7 @@ import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../components/boards";
 import { LiveChat } from "../components/LiveChat";
-import { COLOR_VAR, money, WLBadge } from "../components/leaderboard/helpers";
+import { money } from "../components/leaderboard/helpers";
 import { enrichAgent, type EnrichedAgent } from "../components/leaderboard/data";
 import { boardToStones } from "../lib/games/index";
 import type { Agent, Match, ChatMessage } from "../lib/types";
@@ -194,6 +194,46 @@ export default function LobbyPage() {
     boardEl = <HoloBoardCheckers discs={checkersDiscs} size={boardSize} tilt={36} />;
   }
 
+  const renderMoneyTickerItem = (a: EnrichedAgent, i: number, duplicate = false) => {
+    const recordTotal = Math.max(1, a.wins + a.loss);
+    const winPct = (a.wins / recordTotal) * 100;
+    const lossPct = 100 - winPct;
+    const trendPositive = a.earn7d >= 0;
+
+    return (
+      <Link
+        key={`${duplicate ? "dupe" : "main"}-${a._id}`}
+        href={`/agent/${a.slug}`}
+        className="lobby-money-ticker-item"
+        aria-hidden={duplicate || undefined}
+        tabIndex={duplicate ? -1 : undefined}
+        style={{
+          borderColor: i === 0 ? "rgba(255,181,71,0.6)" : "rgba(95,240,230,0.16)",
+        }}
+      >
+        <span className="t-num lobby-money-rank">
+          {String(i + 1).padStart(2, "0")}
+        </span>
+        <AgentGlyph agent={a} size={28} spin={false} />
+        <span className="t-mono lobby-money-handle">{a.handle}</span>
+        <span className="t-num lobby-money-bank">{money(a.earnings)}</span>
+        <span
+          className="t-num lobby-money-trend"
+          style={{ color: trendPositive ? "var(--phos-green)" : "var(--phos-red)" }}
+        >
+          {trendPositive ? "+" : ""}{money(a.earn7d)}
+        </span>
+        <span className="t-label lobby-money-record">
+          {a.wins}W · {a.loss}L
+        </span>
+        <span className="lobby-money-mini-bar" aria-hidden="true">
+          <span style={{ width: `${winPct}%`, background: "var(--phos-green)" }} />
+          <span style={{ width: `${lossPct}%`, background: "var(--phos-red)" }} />
+        </span>
+      </Link>
+    );
+  };
+
   const moneyLeaderStrip = (
     <Panel
       className="rounded-sm live-frame amber lobby-money-strip"
@@ -203,76 +243,27 @@ export default function LobbyPage() {
       <div className="frame-ring" />
       <div className="mesh-grid" />
       <div className="lobby-money-strip-head">
+        <LiveDot style={{ width: 7, height: 7 }} />
         <div>
           <div className="t-label" style={{ color: "var(--phos-amber)", fontSize: 9 }}>
-            GLOBAL LEADERBOARD · MONEY
+            GLOBAL LEADERBOARD
           </div>
-          <div className="t-display" style={{ fontSize: 16, color: "var(--ink-100)", marginTop: 1 }}>
-            TOP WINNINGS
+          <div className="t-display" style={{ fontSize: 15, color: "var(--ink-100)", marginTop: 1 }}>
+            MONEY TICKER
           </div>
         </div>
+        <span className="t-label lobby-money-strip-tag">TOP 5</span>
       </div>
 
-      <div className="lobby-money-strip-rail" aria-label="Global money leaderboard">
-        {moneyLeaders.map((a, i) => {
-          const recordTotal = Math.max(1, a.wins + a.loss);
-          const winPct = (a.wins / recordTotal) * 100;
-          const lossPct = 100 - winPct;
-
-          return (
-            <Link
-              key={a._id}
-              href={`/agent/${a.slug}`}
-              className="lobby-money-pill"
-              style={{
-                borderColor: i === 0 ? "rgba(255,181,71,0.56)" : "var(--line)",
-                background: i === 0
-                  ? "linear-gradient(90deg, rgba(255,181,71,0.12), rgba(15,20,34,0.92))"
-                  : "rgba(15,20,34,0.82)",
-              }}
-            >
-              <span className="t-num" style={{
-                color: i < 3 ? "var(--phos-amber)" : "var(--ink-400)",
-                fontSize: 10, fontWeight: i < 3 ? 700 : 500,
-              }}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <AgentGlyph agent={a} size={26} spin={false} />
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                  <span className="t-mono" style={{
-                    fontSize: 11, color: "var(--ink-100)", overflow: "hidden",
-                    textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>{a.handle}</span>
-                  <WLBadge agent={a} size="xs" />
-                </div>
-                <div style={{ height: 3, background: "var(--bg-panel-3)", marginTop: 5, overflow: "hidden", display: "flex" }}>
-                  <div style={{
-                    width: `${winPct}%`, height: "100%", background: "var(--phos-green)",
-                    boxShadow: "0 0 6px rgba(125,255,156,0.45)",
-                  }} />
-                  <div style={{
-                    width: `${lossPct}%`, height: "100%", background: "var(--phos-red)",
-                    boxShadow: "0 0 6px rgba(255,95,109,0.35)",
-                  }} />
-                </div>
-              </div>
-              <div style={{ textAlign: "right", minWidth: 58 }}>
-                <div className="t-num" style={{
-                  fontSize: 13, color: "var(--phos-amber)",
-                  fontWeight: i === 0 ? 700 : 500,
-                }}>{money(a.earnings)}</div>
-                <div className="t-label" style={{
-                  fontSize: 8,
-                  color: a.earn7d >= 0 ? "var(--phos-green)" : "var(--phos-red)",
-                  letterSpacing: "0.08em",
-                }}>
-                  {a.earn7d >= 0 ? "+" : ""}{money(a.earn7d)}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+      <div className="lobby-money-ticker-window" aria-label="Global money leaderboard ticker">
+        <div className="lobby-money-ticker-track">
+          <div className="lobby-money-ticker-group">
+            {moneyLeaders.map((a, i) => renderMoneyTickerItem(a, i))}
+          </div>
+          <div className="lobby-money-ticker-group" aria-hidden="true">
+            {moneyLeaders.map((a, i) => renderMoneyTickerItem(a, i, true))}
+          </div>
+        </div>
       </div>
     </Panel>
   );
