@@ -7,24 +7,11 @@ import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../components/boards";
 import { LiveChat } from "../components/LiveChat";
-import { money } from "../components/leaderboard/helpers";
-import { enrichAgent, type EnrichedAgent } from "../components/leaderboard/data";
 import { boardToStones } from "../lib/games/index";
 import type { Agent, Match, ChatMessage } from "../lib/types";
 import type { GoBoard } from "../lib/games/go";
 import type { ChessBoard } from "../lib/games/chess";
 import type { CheckersDisc } from "../lib/games/checkers";
-
-type AgentInterestStory = {
-  key: string;
-  label: string;
-  headline: string;
-  detail: string;
-  stat: string;
-  agent: Agent;
-  opponent?: Agent;
-  href: string;
-};
 
 export default function LobbyPage() {
   const agents    = useQuery(api.queries.allAgents);
@@ -118,102 +105,6 @@ export default function LobbyPage() {
       .slice(0, 6);
   }, [matches, featured]);
 
-  const moneyLeaders = useMemo<EnrichedAgent[]>(() => {
-    return ((leaderboard as Agent[] | undefined) ?? [])
-      .map(enrichAgent)
-      .sort((a, b) => b.earnings - a.earnings)
-      .slice(0, 5);
-  }, [leaderboard]);
-
-  const agentInterestStories = useMemo<AgentInterestStory[]>(() => {
-    const board = ((leaderboard as Agent[] | undefined) ?? []);
-    const ms = ((matches as Match[] | undefined) ?? []);
-    const stories: AgentInterestStory[] = [];
-    const seen = new Set<string>();
-
-    const pushStory = (story: AgentInterestStory | null | undefined) => {
-      if (!story || seen.has(story.key)) return;
-      seen.add(story.key);
-      stories.push(story);
-    };
-
-    const topMoney = board
-      .map(enrichAgent)
-      .sort((a, b) => b.earnings - a.earnings)[0];
-    pushStory(topMoney && {
-      key: `money-${topMoney.slug}`,
-      label: "BIG WIN",
-      headline: `${topMoney.handle} owns the richest book`,
-      detail: `${topMoney.wins}W-${topMoney.loss}L with the bankroll still climbing.`,
-      stat: money(topMoney.earnings),
-      agent: topMoney,
-      href: `/agent/${topMoney.slug}`,
-    });
-
-    const heater = [...board]
-      .filter(a => a.streak > 0)
-      .sort((a, b) => b.streak - a.streak || b.elo - a.elo)[0];
-    pushStory(heater && {
-      key: `heater-${heater.slug}`,
-      label: "HEATER",
-      headline: `${heater.handle} is stacking wins`,
-      detail: `${heater.streak}-match streak with pressure building across the board.`,
-      stat: `+${heater.streak}`,
-      agent: heater,
-      href: `/agent/${heater.slug}`,
-    });
-
-    const hotAgent = [...board]
-      .filter(a => a.hot)
-      .sort((a, b) => b.elo - a.elo)[0];
-    pushStory(hotAgent && {
-      key: `hot-${hotAgent.slug}`,
-      label: "MARKET MOVE",
-      headline: `${hotAgent.handle} is drawing sharp money`,
-      detail: `${hotAgent.elo} ELO, ${hotAgent.size.toFixed(1)}kb stack, hot tag active.`,
-      stat: "HOT",
-      agent: hotAgent,
-      href: `/agent/${hotAgent.slug}`,
-    });
-
-    const upsetMatch = ms
-      .map(m => {
-        const a = agentMap.get(m.a);
-        const b = agentMap.get(m.b);
-        if (!a || !b) return null;
-        const favorite = a.elo >= b.elo ? a : b;
-        const underdog = a.elo >= b.elo ? b : a;
-        return { match: m, favorite, underdog, gap: favorite.elo - underdog.elo };
-      })
-      .filter((item): item is NonNullable<typeof item> => !!item && item.gap >= 80)
-      .sort((a, b) => b.gap - a.gap || b.match.viewers - a.match.viewers)[0];
-    pushStory(upsetMatch && {
-      key: `upset-${upsetMatch.match.slug}`,
-      label: "UPSET WATCH",
-      headline: `${upsetMatch.underdog.handle} gets a giant shot`,
-      detail: `${upsetMatch.gap} ELO gap against ${upsetMatch.favorite.handle} in a live arena.`,
-      stat: `${upsetMatch.gap}`,
-      agent: upsetMatch.underdog,
-      opponent: upsetMatch.favorite,
-      href: `/match/${upsetMatch.match.slug}`,
-    });
-
-    for (const agent of board) {
-      if (stories.length >= 4) break;
-      pushStory({
-        key: `rank-${agent.slug}`,
-        label: "RANK MOVE",
-        headline: `${agent.handle} is live on the board`,
-        detail: `${agent.wins}W-${agent.loss}L, ${agent.elo} ELO, ${agent.personality}`,
-        stat: `${agent.elo}`,
-        agent,
-        href: `/agent/${agent.slug}`,
-      });
-    }
-
-    return stories.slice(0, 4);
-  }, [leaderboard, matches, agentMap]);
-
   // Measure the board container so we can size the board to fill it exactly.
   // Use a callback ref so the observer is set up as soon as the element mounts,
   // even if it mounts after the initial effect cycle (loading guard was active).
@@ -294,60 +185,6 @@ export default function LobbyPage() {
     boardEl = <HoloBoardCheckers discs={checkersDiscs} size={boardSize} tilt={36} />;
   }
 
-  const renderMoneyBoardItem = (a: EnrichedAgent, i: number) => {
-    const recordTotal = Math.max(1, a.wins + a.loss);
-    const winPct = (a.wins / recordTotal) * 100;
-    const lossPct = 100 - winPct;
-    const trendPositive = a.earn7d >= 0;
-
-    return (
-      <Link
-        key={a._id}
-        href={`/agent/${a.slug}`}
-        className="lobby-money-board-item"
-        style={{
-          borderColor: i === 0 ? "rgba(255,181,71,0.6)" : "rgba(95,240,230,0.16)",
-        }}
-      >
-        <span className="t-num lobby-money-rank">
-          {String(i + 1).padStart(2, "0")}
-        </span>
-        <AgentGlyph agent={a} size={28} spin={false} />
-        <span className="t-mono lobby-money-handle">{a.handle}</span>
-        <span className="t-num lobby-money-bank">{money(a.earnings)}</span>
-        <span
-          className="t-num lobby-money-trend"
-          style={{ color: trendPositive ? "var(--phos-green)" : "var(--phos-red)" }}
-        >
-          {trendPositive ? "+" : ""}{money(a.earn7d)}
-        </span>
-        <span className="t-label lobby-money-record">
-          {a.wins}W · {a.loss}L
-        </span>
-        <span className="lobby-money-mini-bar lobby-money-board-bar" aria-hidden="true">
-          <span style={{ width: `${winPct}%`, background: "var(--phos-green)" }} />
-          <span style={{ width: `${lossPct}%`, background: "var(--phos-red)" }} />
-        </span>
-      </Link>
-    );
-  };
-
-  const moneyLeaderBoard = (
-    <Panel
-      label="GLOBAL LEADERBOARD"
-      right={<span className="t-label lobby-money-strip-tag">TOP 5</span>}
-      className="rounded-sm live-frame amber lobby-money-board"
-      noCorners
-      style={{ overflow: "hidden" }}
-    >
-      <div className="frame-ring" />
-      <div className="mesh-grid" />
-      <div className="lobby-money-board-list">
-        {moneyLeaders.map((a, i) => renderMoneyBoardItem(a, i))}
-      </div>
-    </Panel>
-  );
-
   return (
     <div>
       {/* ── ABOVE THE FOLD: featured match fills the viewport ── */}
@@ -371,18 +208,15 @@ export default function LobbyPage() {
             <button
               onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }}
               className="btn featured-bet-cta lobby-strip-bet-cta"
-              style={{
-                background: `linear-gradient(90deg, rgba(95,240,230,0.18) 0%, rgba(95,240,230,0.18) ${winProbB}%, rgba(255,181,71,0.18) ${winProbB}%, rgba(255,181,71,0.18) 100%)`,
-              }}
             >
               <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{winProbB}%</span>
               <span>BET ON THIS MATCH NOW</span>
-              <span className="t-num" style={{ color: "var(--phos-amber)" }}>{winProbW}%</span>
+              <span className="t-num" style={{ color: "var(--phos-green)" }}>{winProbW}%</span>
             </button>
             <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end", flexWrap: "wrap" }}>
               <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesW ?? 0}</span></span>
-              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-amber)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
-              <span className="t-label" style={{ color: "var(--phos-amber)" }}>W · WHITE</span>
+              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-green)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
+              <span className="t-label" style={{ color: "var(--phos-green)" }}>W · WHITE</span>
             </div>
           </div>
 
@@ -413,66 +247,33 @@ export default function LobbyPage() {
 
         {/* Right sidebar */}
         <div className="stack lobby-sidebar">
-          <Panel
-            label="AGENTWATCH"
-            right={<span className="t-label" style={{ fontSize: 9 }}>LIVE WIRE</span>}
-            className="agent-interest-panel live-frame amber rounded-sm"
-            noCorners
-          >
-            <div className="frame-ring" />
-            <div className="mesh-grid" />
-            <div className="agent-interest-stage">
-              {agentInterestStories.map((story, i) => {
-                const c = `var(--phos-${story.agent.color})`;
-                return (
-                  <Link
-                    key={story.key}
-                    href={story.href}
-                    className="agent-interest-card"
-                    style={{
-                      ["--agent-accent" as string]: c,
-                      animationDelay: `${i * 9}s`,
-                    }}
-                  >
-                    <div className="agent-interest-glow" />
-                    <div className="agent-interest-topline">
-                      <span className="t-label">{story.label}</span>
-                      <span className="gold-shine agent-interest-stat">
-                        <span className="gold-shine-outline" aria-hidden="true">{story.stat}</span>
-                        <span className="gold-shine-fill">{story.stat}</span>
-                      </span>
-                    </div>
-                    <div className="agent-interest-hero">
-                      <div className="agent-interest-avatar" style={{ animationDelay: `${i * 9}s` }}>
-                        <AgentGlyph agent={story.agent} size={74} />
-                      </div>
-                      <div className="agent-interest-copy">
-                        <div className="t-display agent-interest-headline">{story.headline}</div>
-                        <div className="agent-interest-detail">{story.detail}</div>
-                      </div>
-                    </div>
-                    {story.opponent && (
-                      <div className="agent-interest-versus">
-                        <span className="t-label">TARGET</span>
-                        <span className="t-mono">{story.opponent.handle}</span>
-                      </div>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-            <div className="agent-interest-dots" aria-hidden="true">
-              {agentInterestStories.map(story => <span key={story.key} />)}
+          <Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}
+            style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {(leaderboard as Agent[]).slice(0, 10).map((a, i) => (
+                <Link key={a._id} href={`/agent/${a.slug}`} className="leaderboard-row" style={{
+                  padding: "7px 12px", borderBottom: i < 9 ? "1px solid var(--line)" : "none",
+                }}>
+                  <span className="t-num" style={{ fontSize: 10, color: i < 3 ? "var(--phos-cyan)" : "var(--ink-400)", fontWeight: i < 3 ? 600 : 400 }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                    <AgentGlyph agent={a} size={18} spin={false} />
+                    <span className="t-mono" style={{ fontSize: 10, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.handle}</span>
+                  </div>
+                  <span className="t-num" style={{ fontSize: 10, color: `var(--phos-${a.color})` }}>{a.elo}</span>
+                  <span className="t-num" style={{ fontSize: 9, color: a.streak > 0 ? "var(--phos-green)" : a.streak < 0 ? "var(--phos-red)" : "var(--ink-400)" }}>
+                    {a.streak > 0 ? `W${a.streak}` : a.streak < 0 ? `L${Math.abs(a.streak)}` : "—"}
+                  </span>
+                </Link>
+              ))}
             </div>
           </Panel>
-
-          {moneyLeaderBoard}
 
           <Panel
             label="◐ LIVE CHAT"
             right={<span className="t-label" style={{ fontSize: 9 }}>{featured.viewers.toLocaleString()} ONLINE</span>}
-            className="lobby-chat-panel"
-            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
+            style={{ flexShrink: 0, height: 300, display: "flex", flexDirection: "column", overflow: "hidden" }}
           >
             <div style={{ flex: 1, minHeight: 0 }}>
               <LiveChat
@@ -546,7 +347,7 @@ export default function LobbyPage() {
                 {/* Win prob bar */}
                 <div style={{ display: "flex", height: 3 }}>
                   <div style={{ width: `${liveWinB}%`, background: "var(--phos-cyan)", transition: "width 0.8s ease" }} />
-                  <div style={{ width: `${liveWinW}%`, background: "var(--phos-amber)", transition: "width 0.8s ease" }} />
+                  <div style={{ width: `${liveWinW}%`, background: "var(--phos-green)", transition: "width 0.8s ease" }} />
                 </div>
 
                 <div style={{ padding: "10px 14px 4px", display: "flex", justifyContent: "center" }}>

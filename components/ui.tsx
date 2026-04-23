@@ -145,16 +145,16 @@ export function AgentCard({
   const sideFrame = sideMark === "B"
     ? {
       border: "#05070d",
-      glow: "rgba(255,181,71,0.2)",
-      gold: "rgba(255,181,71,0.72)",
+      glow: "rgba(95,240,230,0.18)",
+      line: "rgba(95,240,230,0.58)",
       background: "linear-gradient(90deg, rgba(0,0,0,0.34), rgba(15,20,34,0.88))",
     }
     : sideMark === "W"
       ? {
         border: "var(--ink-100)",
-        glow: "rgba(255,181,71,0.22)",
-        gold: "rgba(255,181,71,0.72)",
-        background: "linear-gradient(270deg, rgba(255,255,255,0.11), rgba(15,20,34,0.88))",
+        glow: "rgba(125,255,156,0.16)",
+        line: "rgba(125,255,156,0.52)",
+        background: "linear-gradient(270deg, rgba(125,255,156,0.08), rgba(15,20,34,0.88))",
       }
       : null;
   return (
@@ -163,8 +163,8 @@ export function AgentCard({
       padding: compact ? "10px 12px" : "14px 16px",
       background: sideFrame?.background ?? (active ? "rgba(95,240,230,0.04)" : "var(--bg-panel)"),
       border: `${sideFrame ? 2 : 1}px solid ${sideFrame?.border ?? (active ? c : "var(--line)")}`,
-      borderRadius: sideFrame ? 8 : 0,
-      outline: sideFrame ? `1px solid ${sideFrame.gold}` : undefined,
+      borderRadius: sideFrame ? 6 : 0,
+      outline: sideFrame ? `1px solid ${sideFrame.line}` : undefined,
       outlineOffset: sideFrame ? 2 : undefined,
       boxShadow: sideFrame
         ? `0 0 14px ${sideFrame.glow}, inset 0 0 18px rgba(5,7,13,0.34)`
