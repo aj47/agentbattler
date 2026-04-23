@@ -235,12 +235,53 @@ export const matchesIndex = query({
 export const matchBets = query({
   args: { matchSlug: v.string() },
   handler: async (ctx, { matchSlug }) => {
-    const bets = await ctx.db.query("bets").withIndex("by_match", q => q.eq("matchSlug", matchSlug)).collect();
+    const bets = await ctx.db.query("bets").withIndex("by_match", q => q.eq("matchSlug", matchSlug)).take(500);
     const poolA = bets.filter(b => b.side === "a").reduce((s, b) => s + b.amount, 0);
     const poolB = bets.filter(b => b.side === "b").reduce((s, b) => s + b.amount, 0);
     const userId = await getAuthUserId(ctx);
     const myBets = userId ? bets.filter(b => b.userId === userId) : [];
     return { poolA, poolB, total: poolA + poolB, count: bets.length, myBets };
+  },
+});
+
+export const arenaData = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const [match, state, chat, emojiData] = await Promise.all([
+      ctx.db.query("matches").withIndex("by_slug", q => q.eq("slug", slug)).unique(),
+      ctx.db.query("matchStates").withIndex("by_slug", q => q.eq("matchSlug", slug)).first(),
+      ctx.db.query("chatMessages").withIndex("by_order").order("asc").take(60),
+      ctx.db.query("featured").withIndex("by_key", q => q.eq("key", "crowd_emoji")).first(),
+    ]);
+
+    const [agentA, agentB] = match
+      ? await Promise.all([
+          ctx.db.query("agents").withIndex("by_slug", q => q.eq("slug", match.a)).unique(),
+          ctx.db.query("agents").withIndex("by_slug", q => q.eq("slug", match.b)).unique(),
+        ])
+      : [null, null];
+
+    const bets = await ctx.db.query("bets").withIndex("by_match", q => q.eq("matchSlug", slug)).take(500);
+    const poolA = bets.filter(b => b.side === "a").reduce((sum, bet) => sum + bet.amount, 0);
+    const poolB = bets.filter(b => b.side === "b").reduce((sum, bet) => sum + bet.amount, 0);
+
+    const userId = await getAuthUserId(ctx);
+    const user = userId ? await ctx.db.get(userId) : null;
+    const wallet = userId
+      ? await ctx.db.query("wallets").withIndex("by_user", q => q.eq("userId", userId)).first()
+      : null;
+    const myBets = userId ? bets.filter(b => b.userId === userId) : [];
+
+    return {
+      match,
+      agentA,
+      agentB,
+      state,
+      chat,
+      emojis: emojiData?.data ?? [],
+      currentUser: user ? { ...user, balance: wallet?.balance ?? 0 } : null,
+      bets: { poolA, poolB, total: poolA + poolB, count: bets.length, myBets },
+    };
   },
 });
 
