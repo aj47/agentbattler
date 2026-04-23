@@ -86,11 +86,30 @@ export function AgentGlyph({ agent, size = 48, spin = true }: { agent: Agent; si
 }
 
 export function AgentCard({
-  agent, side = "L", compact = false, active = false, score,
+  agent, side = "L", compact = false, active = false, score, sideMarker,
 }: {
-  agent: Agent; side?: "L" | "R"; compact?: boolean; active?: boolean; score?: ReactNode;
+  agent: Agent;
+  side?: "L" | "R";
+  compact?: boolean;
+  active?: boolean;
+  score?: ReactNode;
+  sideMarker?: "B" | "W";
 }) {
   const c = `var(--phos-${agent.color})`;
+  const sideMark = sideMarker ?? (score === "B" || score === "W" ? score : null);
+  const sideRing = sideMark === "B"
+    ? {
+      border: "#05070d",
+      inset: "rgba(0,0,0,0.82)",
+      glow: "rgba(255,181,71,0.34)",
+    }
+    : sideMark === "W"
+      ? {
+        border: "var(--ink-100)",
+        inset: "rgba(255,255,255,0.26)",
+        glow: "rgba(255,255,255,0.42)",
+      }
+      : null;
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
@@ -101,7 +120,21 @@ export function AgentCard({
       flexDirection: side === "R" ? "row-reverse" : "row",
       textAlign: side === "R" ? "right" : "left",
     }}>
-      <AgentGlyph agent={agent} size={compact ? 40 : 54} />
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        {sideRing ? (
+          <div style={{
+            borderRadius: "50%",
+            padding: compact ? 4 : 5,
+            border: `2px solid ${sideRing.border}`,
+            boxShadow: `0 0 0 1px ${sideRing.inset}, 0 0 18px ${sideRing.glow}`,
+            background: "rgba(5,7,13,0.5)",
+          }}>
+            <AgentGlyph agent={agent} size={compact ? 40 : 54} />
+          </div>
+        ) : (
+          <AgentGlyph agent={agent} size={compact ? 40 : 54} />
+        )}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "baseline", flexDirection: side === "R" ? "row-reverse" : "row", flexWrap: "wrap" }}>
           <span className="t-mono" style={{ fontSize: compact ? 13 : 15, fontWeight: 600, color: "var(--ink-100)", textShadow: `0 0 8px ${c}` }}>
@@ -120,7 +153,7 @@ export function AgentCard({
           </div>
         )}
       </div>
-      {score !== undefined && (
+      {score !== undefined && !sideRing && (
         <div style={{
           fontFamily: "var(--font-display)", fontSize: compact ? 24 : 36,
           fontWeight: 700, color: c, textShadow: `0 0 14px ${c}`,

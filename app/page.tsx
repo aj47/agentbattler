@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../components/boards";
 import { LiveChat } from "../components/LiveChat";
+import { COLOR_VAR, money, WLBadge } from "../components/leaderboard/helpers";
+import { enrichAgent, type EnrichedAgent } from "../components/leaderboard/data";
 import { boardToStones } from "../lib/games/index";
 import type { Agent, Match, ChatMessage } from "../lib/types";
 import type { GoBoard } from "../lib/games/go";
@@ -94,7 +96,7 @@ export default function LobbyPage() {
   }, [matches, visibleStates, visibleSlugs, initMatch]);
 
   const totalMatchCount = useQuery(api.queries.totalMatchCount);
-  const totalOthers = (totalMatchCount ?? 0) - 1;
+  const totalOthers = Math.max(0, (totalMatchCount ?? (matches as Match[] | undefined)?.length ?? 0) - 1);
 
   // Only render 6 cards on the lobby — rest are on /matches
   const others = useMemo(() => {
@@ -105,20 +107,42 @@ export default function LobbyPage() {
       .slice(0, 6);
   }, [matches, featured]);
 
+  const moneyLeaders = useMemo<EnrichedAgent[]>(() => {
+    return ((leaderboard as Agent[] | undefined) ?? [])
+      .map(enrichAgent)
+      .sort((a, b) => b.earnings - a.earnings)
+      .slice(0, 5);
+  }, [leaderboard]);
+
   // Measure the board container so we can size the board to fill it exactly.
   // Use a callback ref so the observer is set up as soon as the element mounts,
   // even if it mounts after the initial effect cycle (loading guard was active).
   const [boardSize, setBoardSize] = useState(320);
-  const boardContainerCallbackRef = (el: HTMLDivElement | null) => {
+  const boardObserverRef = useRef<ResizeObserver | null>(null);
+  const boardContainerCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    boardObserverRef.current?.disconnect();
+    boardObserverRef.current = null;
     if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
+
+    const updateBoardSize = (width: number, height: number) => {
       const byWidth  = Math.floor(width * 0.74);
       const byHeight = Math.floor((height - 28) / 0.8);
-      setBoardSize(Math.min(byWidth, byHeight, 500));
+      const nextSize = Math.max(160, Math.min(byWidth, byHeight, 500));
+      if (Number.isFinite(nextSize)) setBoardSize(nextSize);
+    };
+
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      updateBoardSize(width, height);
     });
     ro.observe(el);
-  };
+    boardObserverRef.current = ro;
+    updateBoardSize(el.clientWidth, el.clientHeight);
+  }, []);
+
+  useEffect(() => () => {
+    boardObserverRef.current?.disconnect();
+  }, []);
 
   const handleBet = useCallback(async () => {
     if (!featured) return;
@@ -170,10 +194,97 @@ export default function LobbyPage() {
     boardEl = <HoloBoardCheckers discs={checkersDiscs} size={boardSize} tilt={36} />;
   }
 
+  const moneyLeaderStrip = (
+    <Panel
+      className="rounded-sm live-frame amber lobby-money-strip"
+      noCorners
+      style={{ overflow: "hidden" }}
+    >
+      <div className="frame-ring" />
+      <div className="mesh-grid" />
+      <div className="lobby-money-strip-head">
+        <div>
+          <div className="t-label" style={{ color: "var(--phos-amber)", fontSize: 9 }}>
+            GLOBAL LEADERBOARD · MONEY
+          </div>
+          <div className="t-display" style={{ fontSize: 16, color: "var(--ink-100)", marginTop: 1 }}>
+            TOP WINNINGS
+          </div>
+        </div>
+      </div>
+
+      <div className="lobby-money-strip-rail" aria-label="Global money leaderboard">
+        {moneyLeaders.map((a, i) => {
+          const recordTotal = Math.max(1, a.wins + a.loss);
+          const winPct = (a.wins / recordTotal) * 100;
+          const lossPct = 100 - winPct;
+
+          return (
+            <Link
+              key={a._id}
+              href={`/agent/${a.slug}`}
+              className="lobby-money-pill"
+              style={{
+                borderColor: i === 0 ? "rgba(255,181,71,0.56)" : "var(--line)",
+                background: i === 0
+                  ? "linear-gradient(90deg, rgba(255,181,71,0.12), rgba(15,20,34,0.92))"
+                  : "rgba(15,20,34,0.82)",
+              }}
+            >
+              <span className="t-num" style={{
+                color: i < 3 ? "var(--phos-amber)" : "var(--ink-400)",
+                fontSize: 10, fontWeight: i < 3 ? 700 : 500,
+              }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <AgentGlyph agent={a} size={26} spin={false} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  <span className="t-mono" style={{
+                    fontSize: 11, color: "var(--ink-100)", overflow: "hidden",
+                    textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>{a.handle}</span>
+                  <WLBadge agent={a} size="xs" />
+                </div>
+                <div style={{ height: 3, background: "var(--bg-panel-3)", marginTop: 5, overflow: "hidden", display: "flex" }}>
+                  <div style={{
+                    width: `${winPct}%`, height: "100%", background: "var(--phos-green)",
+                    boxShadow: "0 0 6px rgba(125,255,156,0.45)",
+                  }} />
+                  <div style={{
+                    width: `${lossPct}%`, height: "100%", background: "var(--phos-red)",
+                    boxShadow: "0 0 6px rgba(255,95,109,0.35)",
+                  }} />
+                </div>
+              </div>
+              <div style={{ textAlign: "right", minWidth: 58 }}>
+                <div className="t-num" style={{
+                  fontSize: 13, color: "var(--phos-amber)",
+                  fontWeight: i === 0 ? 700 : 500,
+                }}>{money(a.earnings)}</div>
+                <div className="t-label" style={{
+                  fontSize: 8,
+                  color: a.earn7d >= 0 ? "var(--phos-green)" : "var(--phos-red)",
+                  letterSpacing: "0.08em",
+                }}>
+                  {a.earn7d >= 0 ? "+" : ""}{money(a.earn7d)}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+
   return (
     <div>
       {/* ── ABOVE THE FOLD: featured match fills the viewport ── */}
-      <div className="page-shell lobby-hero">
+      <div className="page-shell" style={{ paddingBottom: 0 }}>
+        {moneyLeaderStrip}
+      </div>
+
+      <div className="page-shell lobby-hero" style={{ paddingTop: 12 }}>
 
         {/* Left: featured match panel */}
         <Panel className="lobby-feature-panel" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -181,45 +292,45 @@ export default function LobbyPage() {
           {/* Header */}
           <div className="responsive-toolbar" style={{
             padding: "10px 16px", borderBottom: "1px solid var(--line)", flexShrink: 0,
+            alignItems: "stretch",
             background: "linear-gradient(90deg, rgba(95,240,230,0.08), transparent 40%, rgba(255,181,71,0.08))",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <LiveDot />
-              <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE · FEATURED</span>
-              <span className="t-label">MATCH #{featured.slug.slice(1)}</span>
-              <span className="t-label">·</span>
-              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
-              <span className="t-label">·</span>
-              <span className="t-label">MOVE {moveCount}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <LiveDot />
+                <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE FEATURE</span>
+                <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: 14, flexWrap: "wrap" }}>
               <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
-              <button onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }} className="btn" style={{ borderColor: "var(--phos-amber)", color: "var(--phos-amber)" }}>BET</button>
-              <Link href={`/match/${featured.slug}`} className="btn primary">ENTER ARENA →</Link>
             </div>
           </div>
 
-          {/* Win probability */}
-          <div style={{ padding: "10px clamp(12px, 4vw, 20px) 6px", flexShrink: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span className="t-label">{featA?.handle}</span>
-              <span className="t-label">WIN PROBABILITY</span>
-              <span className="t-label">{featB?.handle}</span>
-            </div>
-            <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-              <div style={{ width: `${winProbB}%`, background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)", transition: "width 0.8s ease" }} />
-              <div style={{ width: `${winProbW}%`, background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)", transition: "width 0.8s ease" }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+          <div style={{ display: "flex", justifyContent: "center", padding: "10px clamp(12px, 4vw, 24px) 0", flexShrink: 0 }}>
+            <button
+              onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }}
+              className="btn featured-bet-cta"
+              style={{
+                width: "min(100%, 560px)",
+                minHeight: 44,
+                justifyContent: "space-between",
+                color: "var(--ink-100)",
+                background: `linear-gradient(90deg, rgba(95,240,230,0.20) 0%, rgba(95,240,230,0.20) ${winProbB}%, rgba(255,181,71,0.20) ${winProbB}%, rgba(255,181,71,0.20) 100%)`,
+              }}
+            >
               <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>{winProbB}%</span>
+              <span className="t-label" style={{ color: "var(--ink-100)", fontSize: 10, letterSpacing: "0.14em" }}>
+                BET ON THIS MATCH NOW!
+              </span>
               <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>{winProbW}%</span>
-            </div>
+            </button>
           </div>
 
           {/* Agent cards */}
           <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
-            {featA && <AgentCard agent={featA} side="L" score="B" />}
-            {featB && <AgentCard agent={featB} side="R" score="W" />}
+            {featA && <AgentCard agent={featA} side="L" sideMarker="B" />}
+            {featB && <AgentCard agent={featB} side="R" sideMarker="W" />}
           </div>
 
           {/* Stats strip */}
@@ -244,41 +355,28 @@ export default function LobbyPage() {
           {/* Board — fills all remaining space */}
           <div
             ref={boardContainerCallbackRef}
-            style={{ flex: 1, minHeight: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 12, overflow: "hidden" }}
+            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 8, overflow: "hidden" }}
           >
+            <div className="match-canvas-kicker">
+              <LiveDot style={{ width: 6, height: 6 }} />
+              <span>LIVE · FEATURED</span>
+              <span>·</span>
+              <span>MATCH #{featured.slug.slice(1)}</span>
+              <span>·</span>
+              <span style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
+              <span>·</span>
+              <span>MOVE {moveCount}</span>
+            </div>
             {boardEl}
           </div>
         </Panel>
 
         {/* Right sidebar */}
         <div className="stack lobby-sidebar">
-          <Panel label="⟡ GLOBAL LEADERBOARD" right={<span className="t-label" style={{ fontSize: 9 }}>S3</span>}
-            style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <div style={{ overflowY: "auto", flex: 1 }}>
-              {(leaderboard as Agent[]).slice(0, 10).map((a, i) => (
-                <Link key={a._id} href={`/agent/${a.slug}`} className="leaderboard-row" style={{
-                  padding: "7px 12px", borderBottom: i < 9 ? "1px solid var(--line)" : "none",
-                }}>
-                  <span className="t-num" style={{ fontSize: 10, color: i < 3 ? "var(--phos-cyan)" : "var(--ink-400)", fontWeight: i < 3 ? 600 : 400 }}>
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                    <AgentGlyph agent={a} size={18} spin={false} />
-                    <span className="t-mono" style={{ fontSize: 10, color: "var(--ink-100)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.handle}</span>
-                  </div>
-                  <span className="t-num" style={{ fontSize: 10, color: `var(--phos-${a.color})` }}>{a.elo}</span>
-                  <span className="t-num" style={{ fontSize: 9, color: a.streak > 0 ? "var(--phos-green)" : a.streak < 0 ? "var(--phos-red)" : "var(--ink-400)" }}>
-                    {a.streak > 0 ? `W${a.streak}` : a.streak < 0 ? `L${Math.abs(a.streak)}` : "—"}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </Panel>
-
           <Panel
             label="◐ LIVE CHAT"
             right={<span className="t-label" style={{ fontSize: 9 }}>{featured.viewers.toLocaleString()} ONLINE</span>}
-            style={{ flexShrink: 0, height: 300, display: "flex", flexDirection: "column", overflow: "hidden" }}
+            style={{ flex: 1, minHeight: 420, display: "flex", flexDirection: "column", overflow: "hidden" }}
           >
             <div style={{ flex: 1, minHeight: 0 }}>
               <LiveChat

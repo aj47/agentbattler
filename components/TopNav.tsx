@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../convex/_generated/api";
 import { LiveDot } from "./ui";
 import { AuthModal } from "./AuthModal";
+import type { Match } from "../lib/types";
 
 const items = [
   { href: "/", label: "LOBBY", match: (p: string) => p === "/" },
@@ -15,7 +16,7 @@ const items = [
   { href: "/match", label: "LIVE MATCH", match: (p: string) => p.startsWith("/match") },
   { href: "/agent", label: "AGENT", match: (p: string) => p.startsWith("/agent") },
   { href: "/bench", label: "BENCH", match: (p: string) => p.startsWith("/bench") },
-  { href: "/submit", label: "SUBMIT", match: (p: string) => p.startsWith("/submit") },
+  { href: "/match", label: "ENTER ARENA", match: (p: string) => p.startsWith("/match"), cta: true },
 ];
 
 export function TopNav() {
@@ -24,6 +25,21 @@ export function TopNav() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { signOut } = useAuthActions();
   const me = useQuery(api.queries.currentUser);
+  const pulseMatches = useQuery(api.queries.topMatches, { limit: 50 });
+  const pulse = useMemo(() => {
+    if (!pulseMatches) {
+      return { live: "LIVE SYNCING", spectators: "SPECTATORS SYNCING" };
+    }
+
+    const matches = pulseMatches as Match[];
+    const liveCount = matches.filter(m => m.status === "live" || m.status === "featured").length;
+    const viewerCount = matches.reduce((sum, m) => sum + m.viewers, 0);
+
+    return {
+      live: `${liveCount.toLocaleString()} ${liveCount === 1 ? "MATCH" : "MATCHES"} LIVE`,
+      spectators: `${viewerCount.toLocaleString()} SPECTATORS`,
+    };
+  }, [pulseMatches]);
 
   return (
     <>
@@ -50,9 +66,12 @@ export function TopNav() {
               const active = i.match(pathname || "/");
               return (
                 <Link key={i.href} href={i.href} className="nav-link" style={{
-                  color: active ? "var(--phos-cyan)" : "var(--ink-300)",
-                  borderBottom: `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
-                  textShadow: active ? "0 0 8px var(--phos-cyan-glow)" : "none",
+                  color: i.cta || active ? "var(--phos-cyan)" : "var(--ink-300)",
+                  border: i.cta ? "1px solid var(--phos-cyan)" : "none",
+                  borderBottom: i.cta ? "1px solid var(--phos-cyan)" : `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
+                  background: i.cta ? "rgba(95,240,230,0.06)" : "transparent",
+                  boxShadow: i.cta ? "0 0 14px var(--phos-cyan-glow)" : "none",
+                  textShadow: i.cta || active ? "0 0 8px var(--phos-cyan-glow)" : "none",
                 }}>{i.label}</Link>
               );
             })}
@@ -62,9 +81,9 @@ export function TopNav() {
         <div className="nav-status-row">
           <div className="nav-live">
             <LiveDot />
-            <span className="t-label" style={{ color: "var(--phos-green)" }}>12 MATCHES LIVE</span>
+            <span className="t-label" style={{ color: "var(--phos-green)" }}>{pulse.live}</span>
           </div>
-          <span className="t-label nav-spectators">16,482 SPECTATORS</span>
+          <span className="t-label nav-spectators">{pulse.spectators}</span>
 
           {me ? (
             <div style={{ position: "relative" }}>
