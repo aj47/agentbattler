@@ -294,7 +294,7 @@ export default function LobbyPage() {
     boardEl = <HoloBoardCheckers discs={checkersDiscs} size={boardSize} tilt={36} />;
   }
 
-  const renderMoneyTickerItem = (a: EnrichedAgent, i: number, duplicate = false) => {
+  const renderMoneyBoardItem = (a: EnrichedAgent, i: number) => {
     const recordTotal = Math.max(1, a.wins + a.loss);
     const winPct = (a.wins / recordTotal) * 100;
     const lossPct = 100 - winPct;
@@ -302,11 +302,9 @@ export default function LobbyPage() {
 
     return (
       <Link
-        key={`${duplicate ? "dupe" : "main"}-${a._id}`}
+        key={a._id}
         href={`/agent/${a.slug}`}
-        className="lobby-money-ticker-item"
-        aria-hidden={duplicate || undefined}
-        tabIndex={duplicate ? -1 : undefined}
+        className="lobby-money-board-item"
         style={{
           borderColor: i === 0 ? "rgba(255,181,71,0.6)" : "rgba(95,240,230,0.16)",
         }}
@@ -326,7 +324,7 @@ export default function LobbyPage() {
         <span className="t-label lobby-money-record">
           {a.wins}W · {a.loss}L
         </span>
-        <span className="lobby-money-mini-bar" aria-hidden="true">
+        <span className="lobby-money-mini-bar lobby-money-board-bar" aria-hidden="true">
           <span style={{ width: `${winPct}%`, background: "var(--phos-green)" }} />
           <span style={{ width: `${lossPct}%`, background: "var(--phos-red)" }} />
         </span>
@@ -334,36 +332,18 @@ export default function LobbyPage() {
     );
   };
 
-  const moneyLeaderStrip = (
+  const moneyLeaderBoard = (
     <Panel
-      className="rounded-sm live-frame amber lobby-money-strip"
+      label="GLOBAL LEADERBOARD"
+      right={<span className="t-label lobby-money-strip-tag">TOP 5</span>}
+      className="rounded-sm live-frame amber lobby-money-board"
       noCorners
       style={{ overflow: "hidden" }}
     >
       <div className="frame-ring" />
       <div className="mesh-grid" />
-      <div className="lobby-money-strip-head">
-        <LiveDot style={{ width: 7, height: 7 }} />
-        <div>
-          <div className="t-label" style={{ color: "var(--phos-amber)", fontSize: 9 }}>
-            GLOBAL LEADERBOARD
-          </div>
-          <div className="t-display" style={{ fontSize: 15, color: "var(--ink-100)", marginTop: 1 }}>
-            MONEY TICKER
-          </div>
-        </div>
-        <span className="t-label lobby-money-strip-tag">TOP 5</span>
-      </div>
-
-      <div className="lobby-money-ticker-window" aria-label="Global money leaderboard ticker">
-        <div className="lobby-money-ticker-track">
-          <div className="lobby-money-ticker-group">
-            {moneyLeaders.map((a, i) => renderMoneyTickerItem(a, i))}
-          </div>
-          <div className="lobby-money-ticker-group" aria-hidden="true">
-            {moneyLeaders.map((a, i) => renderMoneyTickerItem(a, i, true))}
-          </div>
-        </div>
+      <div className="lobby-money-board-list">
+        {moneyLeaders.map((a, i) => renderMoneyBoardItem(a, i))}
       </div>
     </Panel>
   );
@@ -371,11 +351,7 @@ export default function LobbyPage() {
   return (
     <div>
       {/* ── ABOVE THE FOLD: featured match fills the viewport ── */}
-      <div className="page-shell" style={{ paddingBottom: 0 }}>
-        {moneyLeaderStrip}
-      </div>
-
-      <div className="page-shell lobby-hero" style={{ paddingTop: 12 }}>
+      <div className="page-shell lobby-hero" style={{ paddingTop: 26 }}>
 
         {/* Left: featured match panel */}
         <Panel className="lobby-feature-panel" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -489,6 +465,8 @@ export default function LobbyPage() {
               {agentInterestStories.map(story => <span key={story.key} />)}
             </div>
           </Panel>
+
+          {moneyLeaderBoard}
 
           <Panel
             label="◐ LIVE CHAT"
