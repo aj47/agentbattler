@@ -22,15 +22,12 @@ export const leaderboard = query({
 
 export const allGames = query({
   args: {},
-  handler: async (ctx) => ctx.db.query("games").collect(),
+  handler: async (ctx) => ctx.db.query("games").take(20),
 });
 
 export const allMatches = query({
   args: {},
-  handler: async (ctx) => {
-    const matches = await ctx.db.query("matches").take(500);
-    return matches.sort((a, b) => b.viewers - a.viewers);
-  },
+  handler: async (ctx) => ctx.db.query("matches").withIndex("by_viewers").order("desc").take(500),
 });
 
 export const matchBySlug = query({
@@ -48,7 +45,7 @@ export const featuredMatch = query({
 export const allHighlights = query({
   args: {},
   handler: async (ctx) => {
-    const r = await ctx.db.query("highlights").collect();
+    const r = await ctx.db.query("highlights").take(50);
     return r.sort((a, b) => a.order - b.order);
   },
 });
@@ -71,7 +68,7 @@ export const allTicker = query({
 export const bracket = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("bracketMatches").collect();
+    const all = await ctx.db.query("bracketMatches").take(64);
     all.sort((a, b) => a.roundOrder - b.roundOrder || a.matchOrder - b.matchOrder);
     const rounds: { name: string; order: number; matches: typeof all }[] = [];
     for (const m of all) {
@@ -124,7 +121,7 @@ export const myBets = query({
 export const allSubmissions = query({
   args: {},
   handler: async (ctx) => {
-    const rows = await ctx.db.query("submissions").collect();
+    const rows = await ctx.db.query("submissions").take(200);
     return rows.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
   },
 });
@@ -154,17 +151,18 @@ export const matchStatesBySlugs = query({
 // Kept for internal/admin use only — avoid subscribing from clients
 export const allMatchStates = query({
   args: {},
-  handler: async (ctx) => ctx.db.query("matchStates").collect(),
+  handler: async (ctx) => ctx.db.query("matchStates").take(50),
 });
 
 // Top N matches by viewers — avoids sending all 500 to the client
 export const topMatches = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
-    const matches = await ctx.db.query("matches").take(500);
-    return matches
-      .sort((a, b) => b.viewers - a.viewers)
-      .slice(0, Math.max(1, Math.min(limit ?? 50, 100)));
+    return ctx.db
+      .query("matches")
+      .withIndex("by_viewers")
+      .order("desc")
+      .take(Math.max(1, Math.min(limit ?? 50, 100)));
   },
 });
 
@@ -173,15 +171,14 @@ export const lobbyData = query({
   handler: async (ctx) => {
     const [agents, matches, chat, emojiData] = await Promise.all([
       ctx.db.query("agents").take(200),
-      ctx.db.query("matches").take(500),
+      ctx.db.query("matches").withIndex("by_viewers").order("desc").take(50),
       ctx.db.query("chatMessages").withIndex("by_order").order("asc").take(60),
       ctx.db.query("featured").withIndex("by_key", q => q.eq("key", "crowd_emoji")).first(),
     ]);
-    const topMatches = matches.sort((a, b) => b.viewers - a.viewers).slice(0, 50);
 
     return {
       agents,
-      matches: topMatches,
+      matches,
       leaderboard: [...agents].sort((a, b) => b.elo - a.elo),
       chat,
       emojis: emojiData?.data ?? [],
@@ -223,7 +220,7 @@ export const agentProfileData = query({
 export const matchesIndex = query({
   args: {},
   handler: async (ctx) => {
-    const matches = (await ctx.db.query("matches").take(500)).sort((a, b) => b.viewers - a.viewers);
+    const matches = await ctx.db.query("matches").withIndex("by_viewers").order("desc").take(500);
     return {
       matches,
       counts: {
@@ -252,14 +249,14 @@ export const bootstrap = query({
   handler: async (ctx) => {
     const [agents, matches, highlights, ticker, leaderboard] = await Promise.all([
       ctx.db.query("agents").take(200),
-      ctx.db.query("matches").take(500),
+      ctx.db.query("matches").withIndex("by_viewers").order("desc").take(100),
       ctx.db.query("highlights").take(50),
       ctx.db.query("tickerItems").take(50),
       ctx.db.query("agents").withIndex("by_elo").order("desc").take(200),
     ]);
     return {
       agents,
-      matches: matches.sort((a, b) => b.viewers - a.viewers).slice(0, 100),
+      matches,
       highlights: highlights.sort((a,b)=>a.order-b.order),
       ticker: ticker.sort((a,b)=>a.order-b.order).map(t => t.text),
       leaderboard: [...leaderboard].sort((a, b) => b.elo - a.elo),

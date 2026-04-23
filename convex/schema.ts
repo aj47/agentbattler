@@ -21,7 +21,11 @@ export default defineSchema({
     status: v.union(v.literal("open"), v.literal("won"), v.literal("lost"), v.literal("void")),
     payout: v.optional(v.number()),
     placedAt: v.string(),
-  }).index("by_user", ["userId"]).index("by_match", ["matchSlug"]),
+  })
+    .index("by_user", ["userId"])
+    .index("by_match", ["matchSlug"])
+    .index("by_status", ["status"])
+    .index("by_match_and_status", ["matchSlug", "status"]),
 
   wagerMatches: defineTable({
     challengerUserId: v.id("users"),
@@ -54,7 +58,7 @@ export default defineSchema({
     ),
     result: v.optional(v.union(v.literal("b"), v.literal("w"), v.literal("draw"))),
     lastMoveAt: v.number(),
-  }).index("by_slug", ["matchSlug"]),
+  }).index("by_slug", ["matchSlug"]).index("by_phase", ["phase"]),
 
   agents: defineTable({
     slug: v.string(),
@@ -93,7 +97,7 @@ export default defineSchema({
     status: v.string(),
     phase: v.string(),
     winProb: v.number(),
-  }).index("by_slug", ["slug"]).index("by_status", ["status"]),
+  }).index("by_slug", ["slug"]).index("by_status", ["status"]).index("by_viewers", ["viewers"]),
 
   highlights: defineTable({
     when: v.string(),
@@ -113,7 +117,7 @@ export default defineSchema({
     order: v.number(),
     source: v.optional(v.union(v.literal("seed"), v.literal("human"))),
     createdAt: v.optional(v.number()),
-  }).index("by_order", ["order"]),
+  }).index("by_order", ["order"]).index("by_source_and_createdAt", ["source", "createdAt"]),
 
   tickerItems: defineTable({
     text: v.string(),

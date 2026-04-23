@@ -21,6 +21,19 @@ const MOVE_DELAY: Record<string, number> = {
   checkers: 3000,
 };
 
+async function getActiveMatchStates(ctx: any, limit: number) {
+  const [opening, midgame, endgame] = await Promise.all([
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "opening")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "midgame")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "endgame")).take(limit),
+  ]);
+  return [...opening, ...midgame, ...endgame].slice(0, limit);
+}
+
+async function getActiveMatchStateCount(ctx: any, limit: number) {
+  return (await getActiveMatchStates(ctx, limit)).length;
+}
+
 // Shared bet-settlement used both from finalizeMove (inline) and from the
 // settleBets internal mutation. Refunds on draw, pays winners on odds, marks
 // losers lost. Safe to call multiple times — only touches open bets.
@@ -31,10 +44,9 @@ async function settleBetsForSlug(
 ) {
   const bets = await ctx.db
     .query("bets")
-    .withIndex("by_match", (q: any) => q.eq("matchSlug", slug))
+    .withIndex("by_match_and_status", (q: any) => q.eq("matchSlug", slug).eq("status", "open"))
     .collect();
-  const openBets = bets.filter((b: any) => b.status === "open");
-  for (const bet of openBets) {
+  for (const bet of bets) {
     const wallet = await ctx.db
       .query("wallets")
       .withIndex("by_user", (q: any) => q.eq("userId", bet.userId))
@@ -105,10 +117,10 @@ async function finalizeMove(
     }
     if (match.status === "featured") {
       await ctx.db.patch(match._id, { status: "live" });
-      const allMatches = await ctx.db.query("matches").collect();
-      const next = allMatches
-        .filter((m: any) => m._id !== match._id && (m.status === "live" || m.status === "starting"))
-        .sort((a: any, b: any) => (b.viewers ?? 0) - (a.viewers ?? 0))[0];
+      const topMatches = await ctx.db.query("matches").withIndex("by_viewers").order("desc").take(40);
+      const next = topMatches.find(
+        (m: any) => m._id !== match._id && (m.status === "live" || m.status === "starting")
+      );
       if (next) await ctx.db.patch(next._id, { status: "featured" });
     }
     await ctx.scheduler.runAfter(30_000, internal.simulation.resetMatch, { slug });
@@ -459,17 +471,19 @@ export const bootstrapSimulations = internalMutation({
   args: {},
   handler: async (ctx) => {
     const MAX_ACTIVE = 10;
-    const existing = await ctx.db.query("matchStates").collect();
-    const activeCount = existing.filter(s => s.phase !== "finished").length;
+    const activeCount = await getActiveMatchStateCount(ctx, MAX_ACTIVE);
     const slots = MAX_ACTIVE - activeCount;
     if (slots <= 0) return { started: 0 };
 
-    const matches = await ctx.db.query("matches").collect();
-    matches.sort((a, b) => (b.viewers ?? 0) - (a.viewers ?? 0));
+    const matches = await ctx.db.query("matches").withIndex("by_viewers").order("desc").take(MAX_ACTIVE * 4);
 
     let started = 0;
-    for (const match of matches.slice(0, slots)) {
-      const alreadyHasState = existing.some(s => s.matchSlug === match.slug);
+    for (const match of matches) {
+      if (started >= slots) break;
+      const alreadyHasState = await ctx.db
+        .query("matchStates")
+        .withIndex("by_slug", (q: any) => q.eq("matchSlug", match.slug))
+        .first();
       if (alreadyHasState) continue;
 
       const game = match.game as "go19" | "chess" | "checkers";
@@ -499,19 +513,28 @@ export const restartFinished = internalMutation({
   args: {},
   handler: async (ctx) => {
     const MAX_ACTIVE = 10;
-    const allStates = await ctx.db.query("matchStates").collect();
-    const activeCount = allStates.filter(s => s.phase !== "finished").length;
+    const activeCount = await getActiveMatchStateCount(ctx, MAX_ACTIVE);
     const slots = MAX_ACTIVE - activeCount;
     if (slots <= 0) return { restarted: 0 };
 
-    const finished = allStates.filter(s => s.phase === "finished");
-    const matches = await ctx.db.query("matches").collect();
-    const matchMap = new Map(matches.map(m => [m.slug, m]));
-    finished.sort((a, b) => (matchMap.get(b.matchSlug)?.viewers ?? 0) - (matchMap.get(a.matchSlug)?.viewers ?? 0));
+    const finished = await ctx.db
+      .query("matchStates")
+      .withIndex("by_phase", q => q.eq("phase", "finished"))
+      .take(slots * 4);
+    const finishedWithViewers = await Promise.all(
+      finished.map(async state => {
+        const match = await ctx.db
+          .query("matches")
+          .withIndex("by_slug", q => q.eq("slug", state.matchSlug))
+          .first();
+        return { state, viewers: match?.viewers ?? 0 };
+      })
+    );
+    finishedWithViewers.sort((a, b) => b.viewers - a.viewers);
 
     let restarted = 0;
-    for (const s of finished.slice(0, slots)) {
-      await ctx.scheduler.runAfter(restarted * 400, internal.simulation.resetMatch, { slug: s.matchSlug });
+    for (const { state } of finishedWithViewers.slice(0, slots)) {
+      await ctx.scheduler.runAfter(restarted * 400, internal.simulation.resetMatch, { slug: state.matchSlug });
       restarted++;
     }
     return { restarted };
@@ -527,8 +550,8 @@ export const settleAllOpenBets = internalMutation({
   handler: async (ctx) => {
     const openBets = await ctx.db
       .query("bets")
-      .collect()
-      .then(rows => rows.filter(b => b.status === "open"));
+      .withIndex("by_status", q => q.eq("status", "open"))
+      .collect();
 
     let settled = 0;
     let refunded = 0;

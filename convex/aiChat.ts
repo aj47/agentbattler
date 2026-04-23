@@ -265,14 +265,23 @@ export const chatLoopTick = internalAction({
 export const getActiveMatchContext = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const states = await ctx.db.query("matchStates")
-      .filter(q => q.neq(q.field("phase"), "finished"))
-      .collect();
-    const matches = await ctx.db.query("matches").collect();
-    const matchMap = new Map(matches.map(m => [m.slug, m]));
-    return states
-      .map(s => ({ ...s, match: matchMap.get(s.matchSlug) }))
-      .filter(s => s.match)
+    const [opening, midgame, endgame] = await Promise.all([
+      ctx.db.query("matchStates").withIndex("by_phase", q => q.eq("phase", "opening")).take(10),
+      ctx.db.query("matchStates").withIndex("by_phase", q => q.eq("phase", "midgame")).take(10),
+      ctx.db.query("matchStates").withIndex("by_phase", q => q.eq("phase", "endgame")).take(10),
+    ]);
+    const states = [...opening, ...midgame, ...endgame];
+    const withMatches = await Promise.all(
+      states.map(async state => {
+        const match = await ctx.db
+          .query("matches")
+          .withIndex("by_slug", q => q.eq("slug", state.matchSlug))
+          .first();
+        return match ? { ...state, match } : null;
+      })
+    );
+    return withMatches
+      .filter(s => s !== null)
       .sort((a, b) => (b.match?.viewers ?? 0) - (a.match?.viewers ?? 0))
       .slice(0, 10); // top 10 active by viewers
   },
@@ -285,9 +294,9 @@ export const insertAiMessage = internalMutation({
     // Keep chat table lean — delete messages older than 10 minutes
     const cutoff = now - 10 * 60 * 1000;
     const old = await ctx.db.query("chatMessages")
-      .filter(q => q.lt(q.field("createdAt"), cutoff))
-      .collect();
-    for (const m of old.filter(m => m.source === "seed").slice(0, 20)) {
+      .withIndex("by_source_and_createdAt", q => q.eq("source", "seed").lt("createdAt", cutoff))
+      .take(20);
+    for (const m of old) {
       await ctx.db.delete(m._id);
     }
 
