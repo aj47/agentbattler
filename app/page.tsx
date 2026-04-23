@@ -16,11 +16,12 @@ import type { ChessBoard } from "../lib/games/chess";
 import type { CheckersDisc } from "../lib/games/checkers";
 
 export default function LobbyPage() {
-  const agents    = useQuery(api.queries.allAgents);
-  const matches   = useQuery(api.queries.topMatches, { limit: 50 });
-  const leaderboard = useQuery(api.queries.leaderboard);
-  const chat = useQuery(api.queries.allChatMessages);
-  const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
+  const lobbyData = useQuery(api.queries.lobbyData);
+  const agents = lobbyData?.agents;
+  const matches = lobbyData?.matches;
+  const leaderboard = lobbyData?.leaderboard;
+  const chat = lobbyData?.chat;
+  const emojis = lobbyData?.emojis as string[] | null | undefined;
   const initMatch = useMutation(api.mutations.initMatchState);
   const sendChatMessage = useMutation(api.mutations.sendChatMessage);
   const { isAuthenticated } = useConvexAuth();
@@ -95,8 +96,7 @@ export default function LobbyPage() {
     }
   }, [matches, visibleStates, visibleSlugs, initMatch]);
 
-  const totalMatchCount = useQuery(api.queries.totalMatchCount);
-  const totalOthers = Math.max(0, (totalMatchCount ?? (matches as Match[] | undefined)?.length ?? 0) - 1);
+  const totalOthers = Math.max(0, ((matches as Match[] | undefined)?.length ?? 0) - 1);
 
   // Only render 6 cards on the lobby — rest are on /matches
   const others = useMemo(() => {

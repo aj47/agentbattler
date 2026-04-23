@@ -11,7 +11,8 @@ const GAME_FILTERS = ["ALL", "CHESS", "GO", "CHECKERS"] as const;
 type GameFilter = typeof GAME_FILTERS[number];
 
 export default function MatchesPage() {
-  const matches  = useQuery(api.queries.allMatches);
+  const matchIndex = useQuery(api.queries.matchesIndex);
+  const matches = matchIndex?.matches;
   const agents   = useQuery(api.queries.allAgents);
   const [filter, setFilter] = useState<GameFilter>("ALL");
   const [search, setSearch] = useState("");
@@ -24,7 +25,7 @@ export default function MatchesPage() {
 
   const filtered = useMemo(() => {
     if (!matches) return [];
-    let list = (matches as Match[]).sort((a, b) => b.viewers - a.viewers);
+    let list = [...(matches as Match[])];
     if (filter === "CHESS")    list = list.filter(m => m.game === "chess");
     if (filter === "GO")       list = list.filter(m => m.game === "go19");
     if (filter === "CHECKERS") list = list.filter(m => m.game === "checkers");
@@ -39,15 +40,7 @@ export default function MatchesPage() {
     return list;
   }, [matches, filter, search, agentMap]);
 
-  const counts = useMemo(() => {
-    if (!matches) return { live: 0, starting: 0, total: 0 };
-    const ms = matches as Match[];
-    return {
-      live:     ms.filter(m => m.status === "live" || m.status === "featured").length,
-      starting: ms.filter(m => m.status === "starting").length,
-      total:    ms.length,
-    };
-  }, [matches]);
+  const counts = matchIndex?.counts ?? { live: 0, starting: 0, total: 0 };
 
   if (!matches || !agents) {
     return <div className="page-shell" style={{ color: "var(--ink-300)" }}>LOADING…</div>;
