@@ -448,10 +448,13 @@ export default function LobbyPage() {
         {/* Right sidebar */}
         <div className="stack lobby-sidebar">
           <Panel
-            label="AGENT INTEREST"
+            label="AGENTWATCH"
             right={<span className="t-label" style={{ fontSize: 9 }}>LIVE WIRE</span>}
-            className="agent-interest-panel"
+            className="agent-interest-panel live-frame amber rounded-sm"
+            noCorners
           >
+            <div className="frame-ring" />
+            <div className="mesh-grid" />
             <div className="agent-interest-stage">
               {agentInterestStories.map((story, i) => {
                 const c = `var(--phos-${story.agent.color})`;
@@ -468,7 +471,10 @@ export default function LobbyPage() {
                     <div className="agent-interest-glow" />
                     <div className="agent-interest-topline">
                       <span className="t-label">{story.label}</span>
-                      <span className="t-num">{story.stat}</span>
+                      <span className="gold-shine agent-interest-stat">
+                        <span className="gold-shine-outline" aria-hidden="true">{story.stat}</span>
+                        <span className="gold-shine-fill">{story.stat}</span>
+                      </span>
                     </div>
                     <div className="agent-interest-hero">
                       <AgentGlyph agent={story.agent} size={74} />

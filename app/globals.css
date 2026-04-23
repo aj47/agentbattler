@@ -529,6 +529,14 @@ svg { max-width: 100%; }
   position: relative;
   min-height: 286px;
   overflow: hidden;
+  border-color: rgba(255,181,71,0.72);
+  background:
+    linear-gradient(90deg, rgba(255,181,71,0.10), rgba(95,240,230,0.035) 58%, rgba(255,181,71,0.08)),
+    rgba(5,7,13,0.72);
+  box-shadow:
+    0 0 0 1px rgba(255,181,71,0.16),
+    0 0 26px rgba(255,181,71,0.10),
+    inset 0 0 32px rgba(5,7,13,0.44);
 }
 .agent-interest-panel::after {
   content: "";
@@ -536,11 +544,19 @@ svg { max-width: 100%; }
   inset: 38px 0 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(95,240,230,0.07) 1px, transparent 1px),
+    radial-gradient(circle at 15% 12%, rgba(255,230,150,0.16), transparent 22%),
+    linear-gradient(rgba(255,181,71,0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,181,71,0.055) 1px, transparent 1px);
   background-size: 18px 18px;
-  opacity: 0.38;
+  opacity: 0.5;
   mask-image: linear-gradient(180deg, black, transparent 88%);
+}
+.agent-interest-panel .responsive-panel-heading {
+  border-bottom-color: rgba(255,181,71,0.28) !important;
+  background: linear-gradient(90deg, rgba(255,181,71,0.12), rgba(5,7,13,0.2));
+}
+.agent-interest-panel .responsive-panel-heading .t-label:first-child {
+  color: var(--phos-amber);
 }
 .agent-interest-stage {
   position: relative;
@@ -558,9 +574,10 @@ svg { max-width: 100%; }
   padding: 13px 14px 12px;
   color: var(--ink-100);
   background:
-    radial-gradient(circle at 18% 24%, color-mix(in srgb, var(--agent-accent) 28%, transparent), transparent 34%),
-    linear-gradient(135deg, rgba(15,20,34,0.96), rgba(5,7,13,0.9) 54%, rgba(255,181,71,0.08));
-  border-bottom: 1px solid rgba(95,240,230,0.12);
+    radial-gradient(circle at 18% 24%, color-mix(in srgb, var(--agent-accent) 24%, transparent), transparent 34%),
+    radial-gradient(ellipse 72% 58% at 86% 48%, rgba(255,181,71,0.20), transparent 66%),
+    linear-gradient(135deg, rgba(15,20,34,0.96), rgba(5,7,13,0.9) 54%, rgba(255,181,71,0.12));
+  border-bottom: 1px solid rgba(255,181,71,0.24);
   opacity: 0;
   transform: translateX(18px);
   animation: agent-interest-rotate 18s linear infinite;
@@ -588,11 +605,20 @@ svg { max-width: 100%; }
   gap: 8px;
 }
 .agent-interest-topline .t-label { color: var(--agent-accent); font-size: 9px; }
-.agent-interest-topline .t-num {
-  color: var(--agent-accent);
-  font-size: 18px;
+.agent-interest-stat {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 0.95;
   font-weight: 700;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--agent-accent) 42%, transparent);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.agent-interest-stat .gold-shine-fill {
+  filter: drop-shadow(0 0 9px rgba(255, 200, 80, 0.26)) drop-shadow(0 0 2px rgba(255, 181, 71, 0.22));
+}
+.agent-interest-stat .gold-shine-outline {
+  -webkit-text-stroke-width: 0.5px;
+          text-stroke-width: 0.5px;
 }
 .agent-interest-hero {
   position: relative;
@@ -636,13 +662,14 @@ svg { max-width: 100%; }
   display: flex;
   gap: 5px;
   padding: 9px 12px 10px;
-  border-top: 1px solid var(--line);
-  background: rgba(5,7,13,0.5);
+  border-top: 1px solid rgba(255,181,71,0.22);
+  background: linear-gradient(90deg, rgba(255,181,71,0.08), rgba(5,7,13,0.5));
 }
 .agent-interest-dots span {
   width: 18px;
   height: 2px;
-  background: rgba(255,255,255,0.16);
+  background: rgba(255,181,71,0.28);
+  box-shadow: 0 0 6px rgba(255,181,71,0.16);
 }
 .lobby-chat-panel { min-height: 300px; }
 @keyframes agent-interest-rotate {
