@@ -86,7 +86,7 @@ export const bracket = query({
 export const profileMatches = query({
   args: { agentSlug: v.string() },
   handler: async (ctx, { agentSlug }) => {
-    const r = await ctx.db.query("profileMatches").withIndex("by_agent", q => q.eq("agentSlug", agentSlug)).collect();
+    const r = await ctx.db.query("profileMatches").withIndex("by_agent", q => q.eq("agentSlug", agentSlug)).take(50);
     return r.sort((a, b) => a.order - b.order);
   },
 });
@@ -185,6 +185,37 @@ export const lobbyData = query({
       leaderboard: [...agents].sort((a, b) => b.elo - a.elo),
       chat,
       emojis: emojiData?.data ?? [],
+    };
+  },
+});
+
+export const agentProfileData = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const [agent, leaderboard, matches, pnlData] = await Promise.all([
+      ctx.db.query("agents").withIndex("by_slug", q => q.eq("slug", slug)).unique(),
+      ctx.db.query("agents").withIndex("by_elo").order("desc").take(200),
+      ctx.db.query("profileMatches").withIndex("by_agent", q => q.eq("agentSlug", slug)).take(50),
+      ctx.db.query("featured").withIndex("by_key", q => q.eq("key", "profile_pnl")).first(),
+    ]);
+
+    const opponentSlugs = Array.from(new Set(matches.map(m => m.opp)));
+    const opponents = await Promise.all(
+      opponentSlugs.map(opp =>
+        ctx.db.query("agents").withIndex("by_slug", q => q.eq("slug", opp)).unique()
+      )
+    );
+    const opponentBySlug = new Map(
+      opponents.filter(opponent => opponent !== null).map(opponent => [opponent.slug, opponent])
+    );
+
+    return {
+      agent,
+      rank: agent ? leaderboard.findIndex(a => a.slug === agent.slug) + 1 : 0,
+      matches: matches
+        .sort((a, b) => a.order - b.order)
+        .map(match => ({ ...match, opponent: opponentBySlug.get(match.opp) ?? null })),
+      pnl: pnlData?.data ?? null,
     };
   },
 });
