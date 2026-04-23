@@ -11,9 +11,9 @@ import { AuthModal } from "./AuthModal";
 const items = [
   { href: "/", label: "LOBBY", match: (p: string) => p === "/" },
   { href: "/leaderboard", label: "LEADERBOARD", match: (p: string) => p.startsWith("/leaderboard") },
-  { href: "/match", label: "LIVE MATCH", match: (p: string) => p.startsWith("/match") },
   { href: "/agent", label: "AGENT", match: (p: string) => p.startsWith("/agent") },
   { href: "/bench", label: "BENCH", match: (p: string) => p.startsWith("/bench") },
+  { href: "/match", label: "LIVE ARENA", match: (p: string) => p.startsWith("/match") },
 ];
 
 export function TopNav() {
@@ -26,6 +26,20 @@ export function TopNav() {
   const walletLabel = me
     ? `WALLET: $${walletBalance.toLocaleString()}`
     : "WALLET: LOGIN";
+
+  const renderNavLink = (item: { href: string; label: string; match: (p: string) => boolean }) => {
+    const active = item.match(pathname || "/");
+    return (
+      <Link key={item.href} href={item.href} className={`nav-link${item.href === "/match" ? " nav-arena-cta" : ""}`} style={{
+        color: active ? "var(--phos-cyan)" : "var(--ink-300)",
+        border: "none",
+        borderBottom: `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
+        background: "transparent",
+        boxShadow: "none",
+        textShadow: active ? "0 0 8px var(--phos-cyan-glow)" : "none",
+      }}>{item.label}</Link>
+    );
+  };
 
   return (
     <>
@@ -48,22 +62,7 @@ export function TopNav() {
           <div className="nav-divider" />
 
           <nav className="nav-items" aria-label="Primary navigation">
-            <Link href="/match" className="nav-link nav-arena-cta">
-              ENTER ARENA
-            </Link>
-            {items.map(i => {
-              const active = i.match(pathname || "/");
-              return (
-                <Link key={i.href} href={i.href} className="nav-link" style={{
-                  color: active ? "var(--phos-cyan)" : "var(--ink-300)",
-                  border: "none",
-                  borderBottom: `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
-                  background: "transparent",
-                  boxShadow: "none",
-                  textShadow: active ? "0 0 8px var(--phos-cyan-glow)" : "none",
-                }}>{i.label}</Link>
-              );
-            })}
+            {items.map(renderNavLink)}
           </nav>
         </div>
 
