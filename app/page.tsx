@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { useQuery, useMutation, useConvexAuth } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard, AgentGlyph } from "../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../components/boards";
-import { LiveChat } from "../components/LiveChat";
+import { MoveHistory } from "../components/MoveHistory";
 import { boardToStones } from "../lib/games/index";
-import type { Agent, Match, ChatMessage } from "../lib/types";
+import { compareMatchesByNumberDesc, matchNumberFromSlug } from "../lib/matches";
+import type { Agent, Match } from "../lib/types";
 import type { GoBoard } from "../lib/games/go";
 import type { ChessBoard } from "../lib/games/chess";
 import type { CheckersDisc } from "../lib/games/checkers";
@@ -18,11 +19,12 @@ export default function LobbyPage() {
   const agents = lobbyData?.agents;
   const matches = lobbyData?.matches;
   const leaderboard = lobbyData?.leaderboard;
-  const chat = lobbyData?.chat;
-  const emojis = lobbyData?.emojis as string[] | null | undefined;
+  const activeMatchCount = lobbyData?.activeMatchCount ?? 0;
+  const activeMatchSlugs = useMemo(
+    () => new Set((lobbyData?.activeMatchSlugs ?? []) as string[]),
+    [lobbyData?.activeMatchSlugs],
+  );
   const initMatch = useMutation(api.mutations.initMatchState);
-  const sendChatMessage = useMutation(api.mutations.sendChatMessage);
-  const { isAuthenticated } = useConvexAuth();
 
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
@@ -30,16 +32,21 @@ export default function LobbyPage() {
     return m;
   }, [agents]);
 
+  const sortedMatches = useMemo(() => {
+    if (!matches) return [];
+    return [...(matches as Match[])].sort(compareMatchesByNumberDesc);
+  }, [matches]);
+
   const featured: Match | null = useMemo(() => {
-    if (!matches) return null;
-    const ms = matches as Match[];
+    const ms = sortedMatches;
+    if (ms.length === 0) return null;
     return (
+      ms.find(m => activeMatchSlugs.has(m.slug) && m.status === "featured") ??
+      ms.find(m => activeMatchSlugs.has(m.slug)) ??
       ms.find(m => m.status === "featured") ??
-      ms.filter(m => m.status === "live" || m.status === "starting")
-        .sort((a, b) => b.viewers - a.viewers)[0] ??
       ms[0] ?? null
     );
-  }, [matches]);
+  }, [sortedMatches, activeMatchSlugs]);
 
   const featuredState = useQuery(
     api.queries.matchState,
@@ -48,12 +55,13 @@ export default function LobbyPage() {
 
   // Only subscribe to states for the 7 visible matches (featured + 6 cards)
   const visibleSlugs = useMemo(() => {
-    if (!matches) return [];
-    const ms = matches as Match[];
+    const activeMatches = sortedMatches.filter(m => activeMatchSlugs.has(m.slug));
+    const ms = activeMatches.length > 0 ? activeMatches : sortedMatches;
+    if (ms.length === 0) return [];
     const feat = ms.find(m => m.status === "featured") ?? ms[0];
     const top6 = ms.filter(m => m._id !== feat?._id).slice(0, 6);
     return [feat, ...top6].filter(Boolean).map(m => m!.slug);
-  }, [matches]);
+  }, [sortedMatches, activeMatchSlugs]);
 
   const visibleStates = useQuery(
     api.queries.matchStatesBySlugs,
@@ -94,16 +102,17 @@ export default function LobbyPage() {
     }
   }, [matches, visibleStates, visibleSlugs, initMatch]);
 
-  const totalOthers = Math.max(0, ((matches as Match[] | undefined)?.length ?? 0) - 1);
+  const totalOthers = Math.max(0, activeMatchCount - 1);
 
   // Only render 6 cards on the lobby — rest are on /matches
   const others = useMemo(() => {
-    if (!matches || !featured) return (matches as Match[] | undefined) ?? [];
-    return (matches as Match[])
+    const activeMatches = sortedMatches.filter(m => activeMatchSlugs.has(m.slug));
+    const pool = activeMatches.length > 0 ? activeMatches : sortedMatches;
+    if (!featured) return pool;
+    return pool
       .filter(m => m._id !== featured._id)
-      .sort((a, b) => b.viewers - a.viewers)
       .slice(0, 6);
-  }, [matches, featured]);
+  }, [sortedMatches, activeMatchSlugs, featured]);
 
   // Measure the board container so we can size the board to fill it exactly.
   // Use a callback ref so the observer is set up as soon as the element mounts,
@@ -134,10 +143,6 @@ export default function LobbyPage() {
     }
   }, [featured, betAmount, betSide, placeBet]);
 
-  const handleChatSend = useCallback(async (msg: string) => {
-    await sendChatMessage({ msg });
-  }, [sendChatMessage]);
-
   if (!agents || !matches || !leaderboard) {
     return <div className="page-shell" style={{ color: "var(--ink-300)" }}>LOADING…</div>;
   }
@@ -152,9 +157,6 @@ export default function LobbyPage() {
   const winProbW = 100 - winProbB;
   const moveCount = featuredState?.moveCount ?? featured.move;
   const gameLabel = game === "go19" ? "GO 19×19" : game === "chess" ? "CHESS" : "CHECKERS";
-  const chatUserName = currentUser
-    ? ((currentUser as any).name ?? (currentUser as any).email?.split("@")[0] ?? "SPECTATOR")
-    : null;
 
   let boardEl: React.ReactNode;
   if (game === "go19") {
@@ -186,16 +188,15 @@ export default function LobbyPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <LiveDot />
               <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE · FEATURED</span>
-              <span className="t-label">MATCH #{featured.slug.slice(1)}</span>
+              <span className="t-label">MATCH #{matchNumberFromSlug(featured.slug)}</span>
               <span className="t-label">·</span>
               <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
               <span className="t-label">·</span>
               <span className="t-label">MOVE {moveCount}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-              <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
               <button onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }} className="btn" style={{ borderColor: "var(--phos-amber)", color: "var(--phos-amber)" }}>BET</button>
-              <Link href={`/match/${featured.slug}`} className="btn primary">ENTER ARENA →</Link>
+              <Link href={`/match/${featured.slug}`} className="btn primary">ENTER MATCH →</Link>
             </div>
           </div>
 
@@ -207,8 +208,8 @@ export default function LobbyPage() {
               <span className="t-label">{featB?.handle}</span>
             </div>
             <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-              <div style={{ width: `${winProbB}%`, background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)", transition: "width 0.8s ease" }} />
-              <div style={{ width: `${winProbW}%`, background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)", transition: "width 0.8s ease" }} />
+              <div style={{ width: `${winProbB}%`, background: "var(--phos-cyan)" }} />
+              <div style={{ width: `${winProbW}%`, background: "var(--phos-amber)" }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
               <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>{winProbB}%</span>
@@ -276,19 +277,18 @@ export default function LobbyPage() {
           </Panel>
 
           <Panel
-            label="◐ LIVE CHAT"
-            right={<span className="t-label" style={{ fontSize: 9 }}>{featured.viewers.toLocaleString()} ONLINE</span>}
+            label="▮ MOVE HISTORY"
+            right={<span className="t-label" style={{ fontSize: 9 }}>MATCH #{matchNumberFromSlug(featured.slug)}</span>}
             style={{ flexShrink: 0, height: 300, display: "flex", flexDirection: "column", overflow: "hidden" }}
           >
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <LiveChat
-                messages={(chat as ChatMessage[]) || []}
-                emojis={emojis || []}
-                canSend={isAuthenticated && !!currentUser}
-                currentUserName={chatUserName}
-                onSend={handleChatSend}
-              />
-            </div>
+            <MoveHistory
+              notation={featuredState?.notationHistory}
+              moveCount={moveCount}
+              matchSlug={featured.slug}
+              gameLabel={gameLabel}
+              maxMoves={14}
+              compact
+            />
           </Panel>
         </div>
       </div>
@@ -297,10 +297,10 @@ export default function LobbyPage() {
       <div className="page-shell" style={{ paddingTop: 0 }}>
         <div className="responsive-toolbar" style={{ alignItems: "baseline", marginBottom: 16 }}>
           <div>
-            <div className="t-display" style={{ fontSize: 22 }}>HOT ARENAS</div>
-            <div className="t-label" style={{ marginTop: 2 }}>TOP 6 OF {totalOthers} LIVE MATCHES · SORTED BY VIEWERS</div>
+            <div className="t-display" style={{ fontSize: 22 }}>PLAYING NOW</div>
+            <div className="t-label" style={{ marginTop: 2 }}>{Math.min(6, totalOthers)} OF {totalOthers} ACTIVE MATCHES · REAL MOVE STATE</div>
           </div>
-          <Link href="/matches" className="btn primary">VIEW ALL {totalOthers} MATCHES →</Link>
+          <Link href="/matches" className="btn primary">VIEW ALL MATCHES →</Link>
         </div>
 
         <div className="match-cards-grid">
@@ -313,6 +313,7 @@ export default function LobbyPage() {
             const livePhase = ms?.phase ?? m.phase;
             const liveWinB = ms ? Math.round(ms.winProbB * 100) : 50;
             const liveWinW = 100 - liveWinB;
+            const isPlaying = !!ms && ms.phase !== "finished";
 
             // Only render live board if this match has an active simulation state
             let miniBoard: React.ReactNode;
@@ -320,11 +321,11 @@ export default function LobbyPage() {
               if (m.game === "go19") {
                 const stones = boardToStones(ms.board as GoBoard);
                 const lm = ms.lastMove as { x: number; y: number; c: "b" | "w" } | null | undefined;
-                miniBoard = <HoloBoardGo stones={stones} lastMove={lm ?? null} hot={[]} size={200} tilt={42} />;
+                miniBoard = <HoloBoardGo stones={stones} lastMove={lm ?? null} hot={[]} size={200} />;
               } else if (m.game === "chess") {
-                miniBoard = <HoloBoardChess board={ms.board as ChessBoard} size={200} tilt={36} />;
+                miniBoard = <HoloBoardChess board={ms.board as ChessBoard} size={200} />;
               } else {
-                miniBoard = <HoloBoardCheckers discs={ms.board as CheckersDisc[]} size={200} tilt={36} />;
+                miniBoard = <HoloBoardCheckers discs={ms.board as CheckersDisc[]} size={200} />;
               }
             } else {
               // Static placeholder — no live state yet
@@ -342,17 +343,17 @@ export default function LobbyPage() {
               <Panel key={m._id} className="match-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderBottom: "1px solid var(--line)" }}>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {(m.status === "live" || m.status === "featured") && <LiveDot />}
-                    <Pill color={m.status === "starting" ? "amber" : "green"}>{m.status === "starting" ? "SOON" : "LIVE"}</Pill>
+                    {isPlaying && <LiveDot />}
+                    <Pill color={isPlaying ? "green" : "amber"}>{isPlaying ? "PLAYING" : "QUEUED"}</Pill>
                     <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{short}</span>
                   </div>
-                  <span className="t-label">👁 {m.viewers.toLocaleString()}</span>
+                  <span className="t-label">MATCH #{matchNumberFromSlug(m.slug)}</span>
                 </div>
 
                 {/* Win prob bar */}
                 <div style={{ display: "flex", height: 3 }}>
-                  <div style={{ width: `${liveWinB}%`, background: "var(--phos-cyan)", transition: "width 0.8s ease" }} />
-                  <div style={{ width: `${liveWinW}%`, background: "var(--phos-amber)", transition: "width 0.8s ease" }} />
+                  <div style={{ width: `${liveWinB}%`, background: "var(--phos-cyan)" }} />
+                  <div style={{ width: `${liveWinW}%`, background: "var(--phos-amber)" }} />
                 </div>
 
                 <div style={{ padding: "10px 14px 4px", display: "flex", justifyContent: "center" }}>
@@ -387,12 +388,12 @@ export default function LobbyPage() {
       {betOpen && featured && (
         <div onClick={() => setBetOpen(false)} style={{
           position: "fixed", inset: 0, zIndex: 9999,
-          background: "rgba(0,0,0,0.72)", backdropFilter: "blur(4px)",
+          background: "rgba(0,0,0,0.72)",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: "var(--bg-panel)", border: "1px solid var(--phos-amber)",
-            boxShadow: "0 0 40px rgba(255,181,71,0.25)", borderRadius: 2,
+            borderRadius: 2,
             padding: 28, minWidth: 320, maxWidth: 420, width: "90vw",
             display: "flex", flexDirection: "column", gap: 18,
           }}>
@@ -408,7 +409,7 @@ export default function LobbyPage() {
                 <span className="t-num" style={{ fontSize: 10 }}>${featuredBets?.total?.toFixed(0) ?? "0"} · {featuredBets?.count ?? 0} BETS</span>
               </div>
               <div style={{ display: "flex", height: 6, border: "1px solid var(--line)", background: "var(--bg-void)" }}>
-                <div style={{ width: `${featuredBets && featuredBets.total > 0 ? (featuredBets.poolA / featuredBets.total) * 100 : 50}%`, background: "var(--phos-cyan)", transition: "width 0.6s ease" }} />
+                <div style={{ width: `${featuredBets && featuredBets.total > 0 ? (featuredBets.poolA / featuredBets.total) * 100 : 50}%`, background: "var(--phos-cyan)" }} />
                 <div style={{ flex: 1, background: "var(--phos-amber)" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>

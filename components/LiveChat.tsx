@@ -49,7 +49,7 @@ export function LiveChat({ messages, emojis, canSend = false, currentUserName, o
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column-reverse", gap: 6 }}>
         {msgs.map((m, i) => (
-          <div key={`${m.createdAt ?? i}-${m.user}-${m.msg}`} style={{ fontSize: 12, lineHeight: 1.4, animation: i === 0 ? "chatFadeIn 300ms var(--ease-out)" : "none" }}>
+          <div key={`${m.createdAt ?? i}-${m.user}-${m.msg}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
             <span style={{ color: tierColor(m.tier), fontWeight: 600, fontFamily: "var(--font-mono)", fontSize: 11 }}>
               {m.tier === "mod" && <span style={{ marginRight: 3 }}>⚔</span>}
               {m.tier === "vip" && <span style={{ marginRight: 3 }}>◆</span>}
@@ -68,7 +68,6 @@ export function LiveChat({ messages, emojis, canSend = false, currentUserName, o
             padding: "8px 10px", background: "var(--bg-panel)",
             border: "1px solid var(--line)", display: "flex", flexWrap: "wrap",
             gap: 4, width: 220, zIndex: 10,
-            boxShadow: "0 -4px 20px rgba(0,0,0,0.5)",
           }}>
             {emojis.map((e, i) => (
               <button

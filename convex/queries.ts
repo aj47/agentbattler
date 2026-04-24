@@ -2,6 +2,24 @@ import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
+function matchNumberValue(slug: string) {
+  const value = Number.parseInt(slug.match(/[0-9]+/)?.[0] ?? "0", 10);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function byMatchNumberDesc<T extends { slug: string }>(a: T, b: T) {
+  return matchNumberValue(b.slug) - matchNumberValue(a.slug);
+}
+
+async function activeMatchStates(ctx: any, limit = 100) {
+  const [opening, midgame, endgame] = await Promise.all([
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "opening")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "midgame")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "endgame")).take(limit),
+  ]);
+  return [...opening, ...midgame, ...endgame].slice(0, limit);
+}
+
 export const allAgents = query({
   args: {},
   handler: async (ctx) => ctx.db.query("agents").take(200),
@@ -27,7 +45,7 @@ export const allGames = query({
 
 export const allMatches = query({
   args: {},
-  handler: async (ctx) => ctx.db.query("matches").withIndex("by_viewers").order("desc").take(500),
+  handler: async (ctx) => (await ctx.db.query("matches").take(500)).sort(byMatchNumberDesc),
 });
 
 export const matchBySlug = query({
@@ -154,34 +172,54 @@ export const allMatchStates = query({
   handler: async (ctx) => ctx.db.query("matchStates").take(50),
 });
 
-// Top N matches by viewers — avoids sending all 500 to the client
+export const matchCounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const [matches, activeStates] = await Promise.all([
+      ctx.db.query("matches").take(500),
+      activeMatchStates(ctx, 100),
+    ]);
+    return {
+      live: activeStates.length,
+      starting: matches.filter(m => m.status === "starting").length,
+      total: matches.length,
+    };
+  },
+});
+
+// Top N matches by real match number — avoids sending all 500 to the client
 export const topMatches = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
-    return ctx.db
-      .query("matches")
-      .withIndex("by_viewers")
-      .order("desc")
-      .take(Math.max(1, Math.min(limit ?? 50, 100)));
+    const matches = await ctx.db.query("matches").take(500);
+    return matches.sort(byMatchNumberDesc).slice(0, Math.max(1, Math.min(limit ?? 50, 100)));
   },
 });
 
 export const lobbyData = query({
   args: {},
   handler: async (ctx) => {
-    const [agents, matches, chat, emojiData] = await Promise.all([
+    const [agents, matches, activeStates] = await Promise.all([
       ctx.db.query("agents").take(200),
-      ctx.db.query("matches").withIndex("by_viewers").order("desc").take(50),
-      ctx.db.query("chatMessages").withIndex("by_order").order("asc").take(60),
-      ctx.db.query("featured").withIndex("by_key", q => q.eq("key", "crowd_emoji")).first(),
+      ctx.db.query("matches").take(500),
+      activeMatchStates(ctx, 100),
     ]);
+    const activeSlugs = new Set(activeStates.map(state => state.matchSlug));
 
     return {
       agents,
-      matches,
+      matches: matches
+        .sort((a, b) => {
+          const activeDelta = Number(activeSlugs.has(b.slug)) - Number(activeSlugs.has(a.slug));
+          if (activeDelta !== 0) return activeDelta;
+          const featuredDelta = Number(b.status === "featured") - Number(a.status === "featured");
+          if (featuredDelta !== 0) return featuredDelta;
+          return byMatchNumberDesc(a, b);
+        })
+        .slice(0, 50),
+      activeMatchCount: activeStates.length,
+      activeMatchSlugs: activeStates.map(state => state.matchSlug),
       leaderboard: [...agents].sort((a, b) => b.elo - a.elo),
-      chat,
-      emojis: emojiData?.data ?? [],
     };
   },
 });
@@ -220,11 +258,19 @@ export const agentProfileData = query({
 export const matchesIndex = query({
   args: {},
   handler: async (ctx) => {
-    const matches = await ctx.db.query("matches").withIndex("by_viewers").order("desc").take(500);
+    const [matches, activeStates] = await Promise.all([
+      ctx.db.query("matches").take(500),
+      activeMatchStates(ctx, 100),
+    ]);
+    const activeSlugs = new Set(activeStates.map(state => state.matchSlug));
+    const sortedMatches = matches.sort((a, b) => {
+      const activeDelta = Number(activeSlugs.has(b.slug)) - Number(activeSlugs.has(a.slug));
+      return activeDelta !== 0 ? activeDelta : byMatchNumberDesc(a, b);
+    });
     return {
-      matches,
+      matches: sortedMatches,
       counts: {
-        live: matches.filter(m => m.status === "live" || m.status === "featured").length,
+        live: activeStates.length,
         starting: matches.filter(m => m.status === "starting").length,
         total: matches.length,
       },
@@ -247,10 +293,9 @@ export const matchBets = query({
 export const arenaData = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const [match, state, chat, emojiData] = await Promise.all([
+    const [match, state, emojiData] = await Promise.all([
       ctx.db.query("matches").withIndex("by_slug", q => q.eq("slug", slug)).unique(),
       ctx.db.query("matchStates").withIndex("by_slug", q => q.eq("matchSlug", slug)).first(),
-      ctx.db.query("chatMessages").withIndex("by_order").order("asc").take(60),
       ctx.db.query("featured").withIndex("by_key", q => q.eq("key", "crowd_emoji")).first(),
     ]);
 
@@ -277,7 +322,6 @@ export const arenaData = query({
       agentA,
       agentB,
       state,
-      chat,
       emojis: emojiData?.data ?? [],
       currentUser: user ? { ...user, balance: wallet?.balance ?? 0 } : null,
       bets: { poolA, poolB, total: poolA + poolB, count: bets.length, myBets },
@@ -290,14 +334,14 @@ export const bootstrap = query({
   handler: async (ctx) => {
     const [agents, matches, highlights, ticker, leaderboard] = await Promise.all([
       ctx.db.query("agents").take(200),
-      ctx.db.query("matches").withIndex("by_viewers").order("desc").take(100),
+      ctx.db.query("matches").take(500),
       ctx.db.query("highlights").take(50),
       ctx.db.query("tickerItems").take(50),
       ctx.db.query("agents").withIndex("by_elo").order("desc").take(200),
     ]);
     return {
       agents,
-      matches,
+      matches: matches.sort(byMatchNumberDesc).slice(0, 100),
       highlights: highlights.sort((a,b)=>a.order-b.order),
       ticker: ticker.sort((a,b)=>a.order-b.order).map(t => t.text),
       leaderboard: [...leaderboard].sort((a, b) => b.elo - a.elo),

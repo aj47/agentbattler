@@ -30,16 +30,14 @@ export function TickerBar() {
         position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "6px var(--page-pad-x)",
-        background: "rgba(10,12,16,0.72)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        background: "#0a0c10",
         borderTop: "1px solid var(--line)",
         fontFamily: "var(--font-mono)", fontSize: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--ink-300)" }}>
           <span style={{
             display: "inline-block", width: 6, height: 6, borderRadius: 999,
-            background: "var(--phos-cyan)", boxShadow: "0 0 8px var(--phos-cyan)",
+            background: "var(--phos-cyan)",
           }} />
           MARKET FEED · HIDDEN
         </div>
@@ -53,19 +51,16 @@ export function TickerBar() {
   }
 
   const texts = items.map(i => i.text);
-  const joined = [...texts, ...texts];
   return (
     <div style={{
       position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40,
       overflow: "hidden",
       borderTop: "1px solid var(--line)",
-      background: "rgba(10,12,16,0.72)",
-      backdropFilter: "blur(8px)",
-      WebkitBackdropFilter: "blur(8px)",
+      background: "#0a0c10",
       whiteSpace: "nowrap",
     }}>
-      <div style={{ display: "inline-block", animation: "ticker 60s linear infinite", padding: "8px 0", paddingRight: 120 }}>
-        {joined.map((t, i) => (
+      <div style={{ display: "flex", overflowX: "auto", padding: "8px 0", paddingRight: 120 }}>
+        {texts.map((t, i) => (
           <span key={i} style={{ padding: "0 clamp(14px, 5vw, 30px)", fontSize: 11, color: "var(--ink-200)", fontFamily: "var(--font-mono)" }}>
             <span style={{ color: "var(--phos-cyan)", marginRight: 8 }}>◆</span>{t}
           </span>

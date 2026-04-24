@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentGlyph } from "../../components/ui";
+import { compareMatchesByNumberDesc, matchNumberFromSlug } from "../../lib/matches";
 import type { Agent, Match } from "../../lib/types";
 
 const GAME_FILTERS = ["ALL", "CHESS", "GO", "CHECKERS"] as const;
@@ -25,7 +26,7 @@ export default function MatchesPage() {
 
   const filtered = useMemo(() => {
     if (!matches) return [];
-    let list = [...(matches as Match[])];
+    let list = [...(matches as Match[])].sort(compareMatchesByNumberDesc);
     if (filter === "CHESS")    list = list.filter(m => m.game === "chess");
     if (filter === "GO")       list = list.filter(m => m.game === "go19");
     if (filter === "CHECKERS") list = list.filter(m => m.game === "checkers");
@@ -95,12 +96,12 @@ export default function MatchesPage() {
         {/* Table header */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "80px 1fr 1fr 70px 70px 80px 90px 100px",
+          gridTemplateColumns: "88px 1fr 1fr 70px 70px 90px 100px",
           padding: "8px 16px",
           borderBottom: "1px solid var(--line)",
           background: "rgba(5,7,13,0.6)",
         }}>
-          {["MATCH","AGENT A","AGENT B","GAME","MOVE","PHASE","VIEWERS",""].map(h => (
+          {["MATCH","AGENT A","AGENT B","GAME","MOVE","PHASE",""].map(h => (
             <span key={h} className="t-label" style={{ fontSize: 9, color: "var(--ink-400)" }}>{h}</span>
           ))}
         </div>
@@ -117,7 +118,7 @@ export default function MatchesPage() {
               key={m._id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "80px 1fr 1fr 70px 70px 80px 90px 100px",
+                gridTemplateColumns: "88px 1fr 1fr 70px 70px 90px 100px",
                 padding: "10px 16px",
                 borderBottom: i < filtered.length - 1 ? "1px solid var(--line)" : "none",
                 alignItems: "center",
@@ -128,7 +129,7 @@ export default function MatchesPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 {isLive && <LiveDot />}
                 <span className="t-num" style={{ fontSize: 10, color: isFeatured ? "var(--phos-cyan)" : "var(--ink-300)" }}>
-                  #{m.slug.slice(1)}
+                  #{matchNumberFromSlug(m.slug)}
                 </span>
               </div>
 
@@ -158,9 +159,6 @@ export default function MatchesPage() {
 
               {/* Phase */}
               <span className="t-label" style={{ fontSize: 9, color: "var(--ink-400)" }}>{m.phase.toUpperCase()}</span>
-
-              {/* Viewers */}
-              <span className="t-num" style={{ fontSize: 11 }}>👁 {m.viewers.toLocaleString()}</span>
 
               {/* CTA */}
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>

@@ -36,7 +36,6 @@ export default function BracketPage() {
         position: "relative",
         border: `1px solid ${isLive ? "var(--phos-green)" : isUpset ? "var(--phos-magenta)" : "var(--line)"}`,
         background: "var(--bg-panel)",
-        boxShadow: isLive ? "0 0 18px rgba(125,255,156,0.2)" : isUpset ? "var(--glow-magenta)" : "none",
       }}>
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -127,9 +126,9 @@ export default function BracketPage() {
               <span className="t-label" style={{ color: "var(--phos-magenta)", fontSize: 11 }}>◆ CHAMPION</span>
             </div>
             <div className="champion-orb">
-              <div style={{ position: "absolute", inset: 0, border: "1px solid var(--phos-magenta)", borderRadius: "50%", animation: "rot 12s linear infinite", clipPath: "polygon(0 0, 70% 0, 70% 10%, 100% 10%, 100% 100%, 0 100%)" }} />
-              <div style={{ position: "absolute", inset: 12, border: "1px dashed var(--phos-magenta)", borderRadius: "50%", opacity: 0.4, animation: "rot 18s linear infinite reverse" }} />
-              <div style={{ position: "absolute", inset: 20, borderRadius: "50%", background: "radial-gradient(circle, var(--phos-magenta) 0%, transparent 70%)", opacity: 0.3, filter: "blur(8px)" }} />
+              <div style={{ position: "absolute", inset: 0, border: "1px solid var(--phos-magenta)", borderRadius: "50%", clipPath: "polygon(0 0, 70% 0, 70% 10%, 100% 10%, 100% 100%, 0 100%)" }} />
+              <div style={{ position: "absolute", inset: 12, border: "1px dashed var(--phos-magenta)", borderRadius: "50%", opacity: 0.4 }} />
+              <div style={{ position: "absolute", inset: 20, borderRadius: "50%", background: "radial-gradient(circle, var(--phos-magenta) 0%, transparent 70%)", opacity: 0.14 }} />
               <div style={{ fontSize: 72, color: "var(--phos-magenta)", textShadow: "var(--glow-magenta)", zIndex: 1 }}>⟡</div>
             </div>
             <div className="t-display" style={{ fontSize: 20, color: "var(--phos-magenta)", textShadow: "var(--glow-magenta)" }}>???</div>
