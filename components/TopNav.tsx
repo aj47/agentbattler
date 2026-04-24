@@ -6,16 +6,14 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../convex/_generated/api";
-import { LiveDot } from "./ui";
 import { AuthModal } from "./AuthModal";
 
 const items = [
   { href: "/", label: "LOBBY", match: (p: string) => p === "/" },
   { href: "/leaderboard", label: "LEADERBOARD", match: (p: string) => p.startsWith("/leaderboard") },
-  { href: "/match", label: "LIVE MATCH", match: (p: string) => p.startsWith("/match") },
   { href: "/agent", label: "AGENT", match: (p: string) => p.startsWith("/agent") },
   { href: "/bench", label: "BENCH", match: (p: string) => p.startsWith("/bench") },
-  { href: "/submit", label: "SUBMIT", match: (p: string) => p.startsWith("/submit") },
+  { href: "/match", label: "LIVE ARENA", match: (p: string) => p.startsWith("/match") },
 ];
 
 export function TopNav() {
@@ -24,6 +22,24 @@ export function TopNav() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { signOut } = useAuthActions();
   const me = useQuery(api.queries.currentUser);
+  const walletBalance = (me as any)?.balance ?? 0;
+  const walletLabel = me
+    ? `WALLET: $${walletBalance.toLocaleString()}`
+    : "WALLET: LOGIN";
+
+  const renderNavLink = (item: { href: string; label: string; match: (p: string) => boolean }) => {
+    const active = item.match(pathname || "/");
+    return (
+      <Link key={item.href} href={item.href} className={`nav-link${item.href === "/match" ? " nav-arena-cta" : ""}`} style={{
+        color: active ? "var(--phos-cyan)" : "var(--ink-300)",
+        border: "none",
+        borderBottom: `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
+        background: "transparent",
+        boxShadow: "none",
+        textShadow: active ? "0 0 8px var(--phos-cyan-glow)" : "none",
+      }}>{item.label}</Link>
+    );
+  };
 
   return (
     <>
@@ -46,39 +62,30 @@ export function TopNav() {
           <div className="nav-divider" />
 
           <nav className="nav-items" aria-label="Primary navigation">
-            {items.map(i => {
-              const active = i.match(pathname || "/");
-              return (
-                <Link key={i.href} href={i.href} className="nav-link" style={{
-                  color: active ? "var(--phos-cyan)" : "var(--ink-300)",
-                  borderBottom: `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
-                  textShadow: active ? "0 0 8px var(--phos-cyan-glow)" : "none",
-                }}>{i.label}</Link>
-              );
-            })}
+            {items.map(renderNavLink)}
           </nav>
         </div>
 
         <div className="nav-status-row">
-          <div className="nav-live">
-            <LiveDot />
-            <span className="t-label" style={{ color: "var(--phos-green)" }}>12 MATCHES LIVE</span>
-          </div>
-          <span className="t-label nav-spectators">16,482 SPECTATORS</span>
-
           {me ? (
             <div style={{ position: "relative" }}>
-              <button onClick={() => setShowUserMenu(v => !v)} style={{
-                display: "flex", alignItems: "center", gap: 8,
-                background: "var(--bg-panel)", border: "1px solid var(--line)",
-                padding: "6px 12px", cursor: "pointer",
-              }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--phos-green)", boxShadow: "0 0 6px var(--phos-green)" }} />
+              <button
+                type="button"
+                onClick={() => setShowUserMenu(v => !v)}
+                className="nav-wallet-indicator"
+              >
+                <span style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: "var(--phos-green)",
+                  boxShadow: "0 0 6px var(--phos-green)",
+                }} />
                 <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)" }}>
                   {(me as any).name ?? (me as any).email?.split("@")[0] ?? "ACCOUNT"}
                 </span>
-                <span className="t-num" style={{ fontSize: 11, color: "var(--phos-cyan)" }}>
-                  ${((me as any).balance ?? 0).toLocaleString()}
+                <span className="t-label">
+                  {walletLabel}
                 </span>
               </button>
               {showUserMenu && (
@@ -107,8 +114,19 @@ export function TopNav() {
               )}
             </div>
           ) : (
-            <button onClick={() => setShowAuth(true)} className="btn primary">
-              SIGN IN / REGISTER
+            <button
+              type="button"
+              onClick={() => setShowAuth(true)}
+              className="nav-wallet-indicator"
+            >
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: 999,
+                background: "var(--phos-amber)",
+                boxShadow: "0 0 6px var(--phos-amber)",
+              }} />
+              <span className="t-label">{walletLabel}</span>
             </button>
           )}
         </div>

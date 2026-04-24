@@ -3,6 +3,51 @@
 import { CSSProperties, ReactNode } from "react";
 import type { Agent } from "../lib/types";
 
+function pct(wins: number, loss: number) {
+  const total = wins + loss;
+  return total > 0 ? Math.round((wins / total) * 100) : 0;
+}
+
+function architectureNote(agent: Agent) {
+  if (agent.size >= 45) return `${agent.size.toFixed(1)}kb heavyweight build`;
+  if (agent.size <= 20) return `${agent.size.toFixed(1)}kb micro-build, speed first`;
+  return `${agent.size.toFixed(1)}kb midweight stack`;
+}
+
+function strategyNote(agent: Agent) {
+  const text = `${agent.personality} ${agent.bio}`.toLowerCase();
+  if (text.includes("queen")) return "queen pressure stays live deep into middlegame";
+  if (text.includes("rook")) return "rook lifts are part of the gameplan";
+  if (text.includes("endgame") || text.includes("tablebase")) return "gets stronger after trades come off";
+  if (text.includes("opening") || text.includes("book")) return "opening prep is a real edge early";
+  if (text.includes("aggressive") || text.includes("sacrific") || text.includes("rush") || text.includes("invasion")) return "fast-start profile, high early volatility";
+  if (text.includes("defensive") || text.includes("fortress") || text.includes("territor") || text.includes("patience")) return "grinds edges and protects the lead";
+  if (text.includes("random") || text.includes("chaos") || text.includes("unorthodox")) return "high-variance lines keep bettors guessing";
+  return agent.personality;
+}
+
+function buildAgentNotes(agent: Agent) {
+  const winRate = pct(agent.wins, agent.loss);
+  const notes = [
+    `${winRate}% win rate on ${agent.wins}W-${agent.loss}L`,
+    architectureNote(agent),
+    strategyNote(agent),
+  ];
+
+  if (agent.streak >= 3) notes.push(`on a ${agent.streak}-match heater`);
+  else if (agent.streak > 0) notes.push(`quiet ${agent.streak}-match uptick`);
+  else if (agent.streak <= -3) notes.push(`trying to snap a ${Math.abs(agent.streak)}-match skid`);
+
+  if (agent.hot) notes.push("market favorite and taking sharp money");
+
+  if (agent.bio) {
+    const bioLine = agent.bio.replace(/\.+$/g, "").trim();
+    if (bioLine) notes.push(bioLine);
+  }
+
+  return notes.slice(0, 5);
+}
+
 export function Panel({
   children, style, label, right, className = "", noCorners = false,
 }: {
@@ -86,22 +131,51 @@ export function AgentGlyph({ agent, size = 48, spin = true }: { agent: Agent; si
 }
 
 export function AgentCard({
-  agent, side = "L", compact = false, active = false, score,
+  agent, side = "L", compact = false, active = false, score, sideMarker,
 }: {
-  agent: Agent; side?: "L" | "R"; compact?: boolean; active?: boolean; score?: ReactNode;
+  agent: Agent;
+  side?: "L" | "R";
+  compact?: boolean;
+  active?: boolean;
+  score?: ReactNode;
+  sideMarker?: "B" | "W";
 }) {
   const c = `var(--phos-${agent.color})`;
+  const sideMark = sideMarker ?? (score === "B" || score === "W" ? score : null);
+  const sideFrame = sideMark === "B"
+    ? {
+      border: "#05070d",
+      glow: "rgba(95,240,230,0.18)",
+      line: "rgba(95,240,230,0.58)",
+      background: "linear-gradient(90deg, rgba(0,0,0,0.34), rgba(15,20,34,0.88))",
+    }
+    : sideMark === "W"
+      ? {
+        border: "var(--ink-100)",
+        glow: "rgba(125,255,156,0.16)",
+        line: "rgba(125,255,156,0.52)",
+        background: "linear-gradient(270deg, rgba(125,255,156,0.08), rgba(15,20,34,0.88))",
+      }
+      : null;
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
       padding: compact ? "10px 12px" : "14px 16px",
-      background: active ? "rgba(95,240,230,0.04)" : "var(--bg-panel)",
-      border: `1px solid ${active ? c : "var(--line)"}`,
+      background: sideFrame?.background ?? (active ? "rgba(95,240,230,0.04)" : "var(--bg-panel)"),
+      border: `${sideFrame ? 2 : 1}px solid ${sideFrame?.border ?? (active ? c : "var(--line)")}`,
+      borderRadius: 0,
+      outline: sideFrame ? `1px solid ${sideFrame.line}` : undefined,
+      outlineOffset: sideFrame ? 2 : undefined,
+      boxShadow: sideFrame
+        ? `0 0 14px ${sideFrame.glow}, inset 0 0 18px rgba(5,7,13,0.34)`
+        : undefined,
       position: "relative",
       flexDirection: side === "R" ? "row-reverse" : "row",
       textAlign: side === "R" ? "right" : "left",
     }}>
-      <AgentGlyph agent={agent} size={compact ? 40 : 54} />
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <AgentGlyph agent={agent} size={compact ? 40 : 54} />
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "baseline", flexDirection: side === "R" ? "row-reverse" : "row", flexWrap: "wrap" }}>
           <span className="t-mono" style={{ fontSize: compact ? 13 : 15, fontWeight: 600, color: "var(--ink-100)", textShadow: `0 0 8px ${c}` }}>
@@ -115,12 +189,22 @@ export function AgentCard({
           <span className="t-label" style={{ fontSize: 9 }}>{agent.author}</span>
         </div>
         {!compact && (
-          <div style={{ marginTop: 6, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-300)", fontStyle: "italic" }}>
-            // {agent.personality}
+          <div className={`agent-note-marquee ${side === "R" ? "right" : ""}`} style={{ marginTop: 8 }}>
+            <div className="agent-note-track">
+              {[0, 1].map(group => (
+                <div key={group} className="agent-note-group" aria-hidden={group === 1}>
+                  {buildAgentNotes(agent).map((note, i) => (
+                    <span key={`${group}-${i}`} className="agent-note-chip">
+                      {note}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
-      {score !== undefined && (
+      {score !== undefined && !sideFrame && (
         <div style={{
           fontFamily: "var(--font-display)", fontSize: compact ? 24 : 36,
           fontWeight: 700, color: c, textShadow: `0 0 14px ${c}`,

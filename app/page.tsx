@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../convex/_generated/api";
@@ -94,7 +94,7 @@ export default function LobbyPage() {
   }, [matches, visibleStates, visibleSlugs, initMatch]);
 
   const totalMatchCount = useQuery(api.queries.totalMatchCount);
-  const totalOthers = (totalMatchCount ?? 0) - 1;
+  const totalOthers = Math.max(0, (totalMatchCount ?? (matches as Match[] | undefined)?.length ?? 0) - 1);
 
   // Only render 6 cards on the lobby — rest are on /matches
   const others = useMemo(() => {
@@ -109,16 +109,31 @@ export default function LobbyPage() {
   // Use a callback ref so the observer is set up as soon as the element mounts,
   // even if it mounts after the initial effect cycle (loading guard was active).
   const [boardSize, setBoardSize] = useState(320);
-  const boardContainerCallbackRef = (el: HTMLDivElement | null) => {
+  const boardObserverRef = useRef<ResizeObserver | null>(null);
+  const boardContainerCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    boardObserverRef.current?.disconnect();
+    boardObserverRef.current = null;
     if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
+
+    const updateBoardSize = (width: number, height: number) => {
       const byWidth  = Math.floor(width * 0.74);
       const byHeight = Math.floor((height - 28) / 0.8);
-      setBoardSize(Math.min(byWidth, byHeight, 500));
+      const nextSize = Math.max(160, Math.min(byWidth, byHeight, 500));
+      if (Number.isFinite(nextSize)) setBoardSize(nextSize);
+    };
+
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      updateBoardSize(width, height);
     });
     ro.observe(el);
-  };
+    boardObserverRef.current = ro;
+    updateBoardSize(el.clientWidth, el.clientHeight);
+  }, []);
+
+  useEffect(() => () => {
+    boardObserverRef.current?.disconnect();
+  }, []);
 
   const handleBet = useCallback(async () => {
     if (!featured) return;
@@ -173,59 +188,16 @@ export default function LobbyPage() {
   return (
     <div>
       {/* ── ABOVE THE FOLD: featured match fills the viewport ── */}
-      <div className="page-shell lobby-hero">
+      <div className="page-shell lobby-hero" style={{ paddingTop: 26 }}>
 
         {/* Left: featured match panel */}
         <Panel className="lobby-feature-panel" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-          {/* Header */}
-          <div className="responsive-toolbar" style={{
-            padding: "10px 16px", borderBottom: "1px solid var(--line)", flexShrink: 0,
-            background: "linear-gradient(90deg, rgba(95,240,230,0.08), transparent 40%, rgba(255,181,71,0.08))",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <LiveDot />
-              <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE · FEATURED</span>
-              <span className="t-label">MATCH #{featured.slug.slice(1)}</span>
-              <span className="t-label">·</span>
-              <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
-              <span className="t-label">·</span>
-              <span className="t-label">MOVE {moveCount}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-              <span className="t-label">👁 {featured.viewers.toLocaleString()}</span>
-              <button onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }} className="btn" style={{ borderColor: "var(--phos-amber)", color: "var(--phos-amber)" }}>BET</button>
-              <Link href={`/match/${featured.slug}`} className="btn primary">ENTER ARENA →</Link>
-            </div>
-          </div>
-
-          {/* Win probability */}
-          <div style={{ padding: "10px clamp(12px, 4vw, 20px) 6px", flexShrink: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span className="t-label">{featA?.handle}</span>
-              <span className="t-label">WIN PROBABILITY</span>
-              <span className="t-label">{featB?.handle}</span>
-            </div>
-            <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-              <div style={{ width: `${winProbB}%`, background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)", transition: "width 0.8s ease" }} />
-              <div style={{ width: `${winProbW}%`, background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)", transition: "width 0.8s ease" }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 11 }}>{winProbB}%</span>
-              <span className="t-num" style={{ color: "var(--phos-amber)", fontSize: 11 }}>{winProbW}%</span>
-            </div>
-          </div>
-
-          {/* Agent cards */}
-          <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
-            {featA && <AgentCard agent={featA} side="L" score="B" />}
-            {featB && <AgentCard agent={featB} side="R" score="W" />}
-          </div>
-
           {/* Stats strip */}
           <div className="lobby-stats-strip" style={{
-            padding: "6px clamp(12px, 4vw, 20px)", flexShrink: 0,
-            borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)",
+            padding: "9px clamp(14px, 4vw, 22px)", flexShrink: 0,
+            minHeight: 40,
+            borderBottom: "1px solid var(--line)",
             background: "rgba(5,7,13,0.4)",
           }}>
             <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", flexWrap: "wrap" }}>
@@ -233,19 +205,42 @@ export default function LobbyPage() {
               <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{featuredState ? (game === "go19" ? (winProbB * 1.8).toFixed(1) : featuredState.capturesB) : "—"}</span></span>
               <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesB ?? 0}</span></span>
             </div>
-            <span className="t-label" style={{ color: "var(--ink-400)" }}>{(featuredState?.phase ?? featured.phase).toUpperCase()} · MV {moveCount}</span>
+            <button
+              onClick={() => { setBetOpen(true); setBetStatus("idle"); setBetError(""); }}
+              className="btn featured-bet-cta lobby-strip-bet-cta"
+            >
+              <span className="t-num" style={{ color: "var(--phos-cyan)" }}>{winProbB}%</span>
+              <span>BET ON THIS MATCH NOW</span>
+              <span className="t-num" style={{ color: "var(--phos-green)" }}>{winProbW}%</span>
+            </button>
             <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-mono)", justifyContent: "flex-end", flexWrap: "wrap" }}>
               <span className="t-label">CAP <span className="t-num" style={{ color: "var(--ink-100)" }}>{featuredState?.capturesW ?? 0}</span></span>
-              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-amber)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
-              <span className="t-label" style={{ color: "var(--phos-amber)" }}>W · WHITE</span>
+              <span className="t-label">{game === "go19" ? "TERR" : "MAT"} <span className="t-num" style={{ color: "var(--phos-green)" }}>{featuredState ? (game === "go19" ? (winProbW * 1.8).toFixed(1) : featuredState.capturesW) : "—"}</span></span>
+              <span className="t-label" style={{ color: "var(--phos-green)" }}>W · WHITE</span>
             </div>
+          </div>
+
+          {/* Agent cards */}
+          <div className="featured-agent-grid" style={{ flexShrink: 0 }}>
+            {featA && <AgentCard agent={featA} side="L" sideMarker="B" />}
+            {featB && <AgentCard agent={featB} side="R" sideMarker="W" />}
           </div>
 
           {/* Board — fills all remaining space */}
           <div
             ref={boardContainerCallbackRef}
-            style={{ flex: 1, minHeight: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 12, overflow: "hidden" }}
+            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 8, overflow: "hidden" }}
           >
+            <div className="match-canvas-kicker">
+              <LiveDot style={{ width: 6, height: 6 }} />
+              <span>LIVE · FEATURED</span>
+              <span>·</span>
+              <span>MATCH #{featured.slug.slice(1)}</span>
+              <span>·</span>
+              <span style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
+              <span>·</span>
+              <span>MOVE {moveCount}</span>
+            </div>
             {boardEl}
           </div>
         </Panel>
@@ -352,7 +347,7 @@ export default function LobbyPage() {
                 {/* Win prob bar */}
                 <div style={{ display: "flex", height: 3 }}>
                   <div style={{ width: `${liveWinB}%`, background: "var(--phos-cyan)", transition: "width 0.8s ease" }} />
-                  <div style={{ width: `${liveWinW}%`, background: "var(--phos-amber)", transition: "width 0.8s ease" }} />
+                  <div style={{ width: `${liveWinW}%`, background: "var(--phos-green)", transition: "width 0.8s ease" }} />
                 </div>
 
                 <div style={{ padding: "10px 14px 4px", display: "flex", justifyContent: "center" }}>
