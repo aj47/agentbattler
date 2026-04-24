@@ -1,6 +1,8 @@
 import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 
 function matchNumberValue(slug: string) {
   const value = Number.parseInt(slug.match(/[0-9]+/)?.[0] ?? "0", 10);
@@ -11,11 +13,17 @@ function byMatchNumberDesc<T extends { slug: string }>(a: T, b: T) {
   return matchNumberValue(b.slug) - matchNumberValue(a.slug);
 }
 
-async function activeMatchStates(ctx: any, limit = 100) {
+function realizedBetPnl(bet: Pick<Doc<"bets">, "status" | "amount" | "payout">) {
+  if (bet.status === "won") return (bet.payout ?? 0) - bet.amount;
+  if (bet.status === "lost") return -bet.amount;
+  return 0;
+}
+
+async function activeMatchStates(ctx: QueryCtx, limit = 100) {
   const [opening, midgame, endgame] = await Promise.all([
-    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "opening")).take(limit),
-    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "midgame")).take(limit),
-    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "endgame")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", q => q.eq("phase", "opening")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", q => q.eq("phase", "midgame")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", q => q.eq("phase", "endgame")).take(limit),
   ]);
   return [...opening, ...midgame, ...endgame].slice(0, limit);
 }
@@ -199,12 +207,36 @@ export const topMatches = query({
 export const lobbyData = query({
   args: {},
   handler: async (ctx) => {
-    const [agents, matches, activeStates] = await Promise.all([
+    const [agents, matches, activeStates, bets] = await Promise.all([
       ctx.db.query("agents").take(200),
       ctx.db.query("matches").take(500),
       activeMatchStates(ctx, 100),
+      ctx.db.query("bets").take(1000),
     ]);
     const activeSlugs = new Set(activeStates.map(state => state.matchSlug));
+    const pnlByUser = new Map<Id<"users">, { pnl: number; bets: number; wagered: number }>();
+    for (const bet of bets) {
+      if (bet.status === "open") continue;
+      const current = pnlByUser.get(bet.userId) ?? { pnl: 0, bets: 0, wagered: 0 };
+      current.pnl += realizedBetPnl(bet);
+      current.bets += 1;
+      current.wagered += bet.amount;
+      pnlByUser.set(bet.userId, current);
+    }
+    const topPnlEntries = [...pnlByUser.entries()]
+      .sort((a, b) => b[1].pnl - a[1].pnl)
+      .slice(0, 5);
+    const topPnlUsers = await Promise.all(
+      topPnlEntries.map(async ([userId, stats]) => {
+        const user = await ctx.db.get(userId);
+        return {
+          userId,
+          name: user?.name ?? user?.email?.split("@")[0] ?? "ANON",
+          email: user?.email ?? null,
+          ...stats,
+        };
+      })
+    );
 
     return {
       agents,
@@ -216,10 +248,11 @@ export const lobbyData = query({
           if (featuredDelta !== 0) return featuredDelta;
           return byMatchNumberDesc(a, b);
         })
-        .slice(0, 50),
+        .slice(0, 100),
       activeMatchCount: activeStates.length,
       activeMatchSlugs: activeStates.map(state => state.matchSlug),
       leaderboard: [...agents].sort((a, b) => b.elo - a.elo),
+      topPnlUsers,
     };
   },
 });
