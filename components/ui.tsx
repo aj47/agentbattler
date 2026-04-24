@@ -163,7 +163,7 @@ export function AgentCard({
       padding: compact ? "10px 12px" : "14px 16px",
       background: sideFrame?.background ?? (active ? "rgba(95,240,230,0.04)" : "var(--bg-panel)"),
       border: `${sideFrame ? 2 : 1}px solid ${sideFrame?.border ?? (active ? c : "var(--line)")}`,
-      borderRadius: sideFrame ? 6 : 0,
+      borderRadius: 0,
       outline: sideFrame ? `1px solid ${sideFrame.line}` : undefined,
       outlineOffset: sideFrame ? 2 : undefined,
       boxShadow: sideFrame
