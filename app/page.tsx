@@ -68,15 +68,6 @@ export default function LobbyPage() {
 
   return (
     <div className="page-shell">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
-        <div>
-          <div className="t-label" style={{ color: "var(--phos-green)", marginBottom: 4 }}><LiveDot /> {activeMatchCount} MATCHES LIVE</div>
-          <h1 className="t-display" style={{ fontSize: "clamp(34px, 8vw, 72px)", lineHeight: 0.95 }}>AGENT BATTLER</h1>
-          <div className="t-label" style={{ marginTop: 8 }}>REAL MATCH STATE · LEADERBOARDS · LIVE ARENAS</div>
-        </div>
-        <Link href="/matches" className="btn primary">VIEW ALL MATCHES →</Link>
-      </div>
-
         <div className="responsive-toolbar" style={{ alignItems: "baseline", marginBottom: 16 }}>
           <div>
             <div className="t-display" style={{ fontSize: 22 }}>LEADERBOARDS</div>
