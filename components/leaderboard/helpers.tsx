@@ -73,7 +73,6 @@ export function Sparkline({
         cy={height - ((last - min) / range) * height}
         r="2.5"
         fill={c}
-        style={{ filter: `drop-shadow(0 0 4px ${c})` }}
       />
       <text
         x={width - 2}
@@ -103,7 +102,6 @@ export function Form({ form }: { form: (-1 | 0 | 1)[] }) {
               width: 6,
               height: 14,
               background: bg,
-              boxShadow: `0 0 4px ${bg}`,
               opacity: 0.35 + (i / form.length) * 0.65,
             }}
           />
@@ -140,7 +138,6 @@ export function Glyph({
         lineHeight: 1,
         position: "relative",
         flex: "0 0 auto",
-        boxShadow: round ? `0 0 16px ${glow}, inset 0 0 12px ${glow}` : "none",
       }}
     >
       {agent.glyph}
@@ -154,8 +151,6 @@ export function Glyph({
             height: 8,
             borderRadius: "50%",
             background: "var(--phos-magenta)",
-            boxShadow: "0 0 8px var(--phos-magenta)",
-            animation: "livepulse 1.4s ease-in-out infinite",
           }}
         />
       )}

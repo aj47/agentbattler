@@ -5,6 +5,15 @@ import { v } from "convex/values";
 import { getInitialBoard } from "../lib/games/index";
 import { validateAgentSource } from "./agentValidation";
 
+async function countActiveMatchStates(ctx: any, limit: number) {
+  const [opening, midgame, endgame] = await Promise.all([
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "opening")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "midgame")).take(limit),
+    ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "endgame")).take(limit),
+  ]);
+  return opening.length + midgame.length + endgame.length;
+}
+
 export const initMatchState = mutation({
   args: {
     slug: v.string(),
@@ -18,8 +27,7 @@ export const initMatchState = mutation({
     if (existing) return existing._id;
 
     // Cap concurrent simulations to avoid overwhelming the scheduler
-    const activeCount = await ctx.db.query("matchStates").collect()
-      .then(rows => rows.filter(r => r.phase !== "finished").length);
+    const activeCount = await countActiveMatchStates(ctx, 10);
     if (activeCount >= 10) return null;
 
     const board = getInitialBoard(game);

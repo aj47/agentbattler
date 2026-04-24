@@ -1,5 +1,6 @@
 import AgentPageClient from "./AgentPageClient";
 import { STATIC_AGENT_SLUGS } from "../../../lib/staticRoutes";
+import { getAgentProfilePrefill } from "../../../lib/agentPrefill";
 
 export function generateStaticParams() {
   return STATIC_AGENT_SLUGS.map((slug) => ({ slug }));
@@ -7,5 +8,5 @@ export function generateStaticParams() {
 
 export default async function AgentPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return <AgentPageClient slug={slug} />;
+  return <AgentPageClient slug={slug} initialProfile={getAgentProfilePrefill(slug)} />;
 }

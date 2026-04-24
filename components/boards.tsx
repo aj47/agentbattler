@@ -3,7 +3,7 @@
 import type { Stone } from "../lib/types";
 
 export function HoloBoardGo({
-  stones = [], lastMove, hot = [], size = 520, tilt = 38,
+  stones = [], lastMove, hot = [], size = 520,
 }: {
   stones?: Stone[];
   lastMove?: { x: number; y: number; c: "b" | "w" } | null;
@@ -16,19 +16,12 @@ export function HoloBoardGo({
   const step = (size - pad * 2) / (N - 1);
 
   return (
-    <div className="holo-board" style={{ perspective: "1400px", perspectiveOrigin: "50% 20%", width: `min(100%, ${size}px)`, aspectRatio: "1 / 0.8", position: "relative" }}>
+    <div className="holo-board" style={{ width: `min(100%, ${size}px)`, aspectRatio: "1 / 1", position: "relative" }}>
       <div style={{
-        position: "absolute", left: "50%", bottom: "-10%",
-        width: "90%", height: "10%", transform: "translateX(-50%)",
-        background: "radial-gradient(ellipse, var(--phos-cyan-glow), transparent 70%)",
-        filter: "blur(16px)", opacity: 0.8,
-      }} />
-      <div style={{
-        width: "100%", aspectRatio: "1", transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%",
+        width: "100%", aspectRatio: "1",
         position: "relative",
         background: "linear-gradient(180deg, rgba(95,240,230,0.03) 0%, rgba(95,240,230,0.08) 100%)",
         border: "1px solid rgba(95,240,230,0.25)",
-        boxShadow: "inset 0 0 60px rgba(95,240,230,0.08), 0 0 40px rgba(95,240,230,0.2)",
       }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet" style={{ position: "absolute", inset: 0 }}>
           <defs>
@@ -42,10 +35,6 @@ export function HoloBoardGo({
               <stop offset="60%" stopColor="#c8d4e8" />
               <stop offset="100%" stopColor="#5a6580" />
             </radialGradient>
-            <filter id="glowCyan">
-              <feGaussianBlur stdDeviation="3" />
-              <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
           </defs>
           {Array.from({ length: N }).map((_, i) => (
             <g key={i}>
@@ -57,23 +46,21 @@ export function HoloBoardGo({
             <circle key={`${x}-${y}`} cx={pad + x * step} cy={pad + y * step} r="2.5" fill="var(--phos-cyan)" opacity="0.8" />
           )))}
           {hot.map((h, i) => (
-            <circle key={i} cx={pad + h.x * step} cy={pad + h.y * step} r={step * 0.9} fill="none" stroke="var(--phos-magenta)" strokeWidth="1" opacity="0.5" style={{ animation: `pulseHot 2.2s ease-out ${i * 0.4}s infinite` }} />
+            <circle key={i} cx={pad + h.x * step} cy={pad + h.y * step} r={step * 0.55} fill="none" stroke="var(--phos-magenta)" strokeWidth="1" opacity="0.45" />
           ))}
           {stones.map((s, i) => {
             const cx = pad + s.x * step;
             const cy = pad + s.y * step;
             const r = step * 0.46;
             const fill = s.c === "b" ? "url(#stoneB)" : "url(#stoneW)";
-            const glow = s.c === "b" ? "var(--phos-amber-glow)" : "rgba(255,255,255,0.4)";
             return (
               <g key={i}>
-                <circle cx={cx} cy={cy} r={r + 2} fill={glow} opacity="0.35" filter="url(#glowCyan)" />
                 <circle cx={cx} cy={cy} r={r} fill={fill} stroke={s.c === "b" ? "var(--phos-amber)" : "var(--phos-cyan)"} strokeWidth="0.6" strokeOpacity="0.7" />
               </g>
             );
           })}
           {lastMove && lastMove.x != null && lastMove.y != null && (
-            <circle cx={pad + lastMove.x * step} cy={pad + lastMove.y * step} r={step * 0.2} fill="none" stroke="var(--phos-magenta)" strokeWidth="1.5" style={{ animation: "pulseHot 1.4s ease-out infinite" }} />
+            <circle cx={pad + lastMove.x * step} cy={pad + lastMove.y * step} r={step * 0.24} fill="none" stroke="var(--phos-magenta)" strokeWidth="1.5" />
           )}
         </svg>
       </div>
@@ -82,7 +69,7 @@ export function HoloBoardGo({
 }
 
 export function HoloBoardChess({
-  size = 220, tilt = 36, fen, board,
+  size = 220, fen, board,
 }: {
   size?: number;
   tilt?: number;
@@ -119,9 +106,8 @@ export function HoloBoardChess({
   const step = (size - pad * 2) / 8;
 
   return (
-    <div className="holo-board" style={{ perspective: "1000px", width: `min(100%, ${size}px)`, aspectRatio: "1 / 0.78", position: "relative" }}>
-      <div style={{ position: "absolute", left: "50%", bottom: "-8%", width: "85%", height: "9%", transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(255,181,71,0.35), transparent 70%)", filter: "blur(10px)" }} />
-      <div style={{ width: "100%", aspectRatio: "1", transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%", position: "relative" }}>
+    <div className="holo-board" style={{ width: `min(100%, ${size}px)`, aspectRatio: "1 / 1", position: "relative" }}>
+      <div style={{ width: "100%", aspectRatio: "1", position: "relative" }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet">
           {Array.from({ length: 8 }).map((_, y) =>
             Array.from({ length: 8 }).map((_, x) => {
@@ -138,8 +124,7 @@ export function HoloBoardChess({
             const color = isWhite ? "var(--phos-cyan)" : "var(--phos-amber)";
             return (
               <text key={i} x={pad + c.x * step + step / 2} y={pad + c.y * step + step / 2 + step * 0.28}
-                textAnchor="middle" fontSize={step * 0.75} fill={color}
-                style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
+                textAnchor="middle" fontSize={step * 0.75} fill={color}>
                 {pieces[c.p] || "?"}
               </text>
             );
@@ -151,7 +136,7 @@ export function HoloBoardChess({
 }
 
 export function HoloBoardCheckers({
-  size = 220, tilt = 36, discs: liveDiscs,
+  size = 220, discs: liveDiscs,
 }: {
   size?: number;
   tilt?: number;
@@ -168,9 +153,8 @@ export function HoloBoardCheckers({
   const pad = 10;
   const step = (size - pad * 2) / 8;
   return (
-    <div className="holo-board" style={{ perspective: "1000px", width: `min(100%, ${size}px)`, aspectRatio: "1 / 0.78", position: "relative" }}>
-      <div style={{ position: "absolute", left: "50%", bottom: "-8%", width: "85%", height: "9%", transform: "translateX(-50%)", background: "radial-gradient(ellipse, rgba(125,255,156,0.35), transparent 70%)", filter: "blur(10px)" }} />
-      <div style={{ width: "100%", aspectRatio: "1", transform: `rotateX(${tilt}deg)`, transformOrigin: "50% 60%" }}>
+    <div className="holo-board" style={{ width: `min(100%, ${size}px)`, aspectRatio: "1 / 1", position: "relative" }}>
+      <div style={{ width: "100%", aspectRatio: "1" }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet">
           {Array.from({ length: 8 }).map((_, y) =>
             Array.from({ length: 8 }).map((_, x) => {
@@ -188,7 +172,7 @@ export function HoloBoardCheckers({
             const color = d.c === "r" ? "var(--phos-red)" : "var(--phos-cyan)";
             return (
               <g key={i}>
-                <circle cx={cx} cy={cy} r={step * 0.38} fill="rgba(0,0,0,0.6)" stroke={color} strokeWidth="1.2" style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
+                <circle cx={cx} cy={cy} r={step * 0.38} fill="rgba(0,0,0,0.6)" stroke={color} strokeWidth="1.2" />
                 {d.k && <text x={cx} y={cy + step * 0.12} textAnchor="middle" fontSize={step * 0.4} fill={color}>♛</text>}
               </g>
             );
@@ -200,7 +184,7 @@ export function HoloBoardCheckers({
 }
 
 export function MiniBoard({ game, size, stones }: { game: string; size?: number; stones?: Stone[] }) {
-  if (game === "go19") return <HoloBoardGo stones={(stones || []).slice(0, 24)} size={size} tilt={42} />;
+  if (game === "go19") return <HoloBoardGo stones={(stones || []).slice(0, 24)} size={size} />;
   if (game === "checkers") return <HoloBoardCheckers size={size} />;
   return <HoloBoardChess size={size} />;
 }

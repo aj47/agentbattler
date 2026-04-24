@@ -1,43 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Panel, LiveDot, Pill, AgentCard } from "../../../components/ui";
 import { HoloBoardGo, HoloBoardChess, HoloBoardCheckers } from "../../../components/boards";
-import { LiveChat } from "../../../components/LiveChat";
+import { MoveHistory } from "../../../components/MoveHistory";
 import { boardToStones } from "../../../lib/games/index";
-import type { Agent, Match, ChatMessage } from "../../../lib/types";
+import { matchNumberFromSlug } from "../../../lib/matches";
+import type { Match } from "../../../lib/types";
 import type { GoBoard } from "../../../lib/games/go";
 import type { ChessBoard } from "../../../lib/games/chess";
 import type { CheckersDisc } from "../../../lib/games/checkers";
 
+function FloatingEmojiLayer({ emojis }: { emojis: string[] }) {
+  void emojis;
+  return null;
+}
+
 export default function MatchPageClient({ slug }: { slug: string }) {
-  const match = useQuery(api.queries.matchBySlug, { slug });
-  const agents = useQuery(api.queries.allAgents);
-  const state = useQuery(api.queries.matchState, { slug });
-  const chat = useQuery(api.queries.allChatMessages);
-  const emojis = useQuery(api.queries.featuredData, { key: "crowd_emoji" }) as string[] | null | undefined;
+  const arena = useQuery(api.queries.arenaData, { slug });
+  const match = arena?.match;
+  const a = arena?.agentA;
+  const b = arena?.agentB;
+  const state = arena?.state;
+  const emojis = arena?.emojis as string[] | null | undefined;
+  const currentUser = arena?.currentUser;
+  const matchBets = arena?.bets;
   const initMatch = useMutation(api.mutations.initMatchState);
   const placeBetMutation = useMutation(api.mutations.placeBet);
-  const sendChatMessage = useMutation(api.mutations.sendChatMessage);
   const { isAuthenticated } = useConvexAuth();
-  const currentUser = useQuery(api.queries.currentUser);
-  const matchBets = useQuery(api.queries.matchBets, { matchSlug: slug });
   const [modalOpen, setModalOpen] = useState(false);
   const [betSide, setBetSide] = useState<"a" | "b" | null>(null);
   const [betAmount, setBetAmount] = useState(500);
   const [betStatus, setBetStatus] = useState<"idle" | "placing" | "done" | "error">("idle");
   const [betError, setBetError] = useState("");
-
-  const agentMap = useMemo(() => {
-    const m = new Map<string, Agent>();
-    (agents || []).forEach(a => m.set(a.slug, a as Agent));
-    return m;
-  }, [agents]);
-
-  const [emojiStream, setEmojiStream] = useState<{ e: string; id: number; x: number; dur: number }[]>([]);
 
   // Start simulation if not yet initialised
   useEffect(() => {
@@ -47,29 +45,10 @@ export default function MatchPageClient({ slug }: { slug: string }) {
     }
   }, [state, match, slug, initMatch]);
 
-  useEffect(() => {
-    if (!emojis || emojis.length === 0) return;
-    const id = setInterval(() => {
-      setEmojiStream(prev => {
-        const e = emojis[Math.floor(Math.random() * emojis.length)];
-        return [...prev, { e, id: Math.random(), x: 10 + Math.random() * 80, dur: 2.2 + Math.random() * 1.5 }].slice(-15);
-      });
-    }, 380);
-    return () => clearInterval(id);
-  }, [emojis]);
-
-  const handleChatSend = useCallback(async (msg: string) => {
-    await sendChatMessage({ msg });
-  }, [sendChatMessage]);
-
-  if (!match || !agents) return <div style={{ padding: 40 }}>LOADING…</div>;
+  if (!arena) return <div style={{ padding: 40 }}>LOADING…</div>;
+  if (!match) return <div style={{ padding: 40 }}>Match not found.</div>;
   const m = match as Match;
-  const a = agentMap.get(m.a);
-  const b = agentMap.get(m.b);
   if (!a || !b) return <div style={{ padding: 40 }}>Agent not found.</div>;
-  const chatUserName = currentUser
-    ? ((currentUser as any).name ?? (currentUser as any).email?.split("@")[0] ?? "SPECTATOR")
-    : null;
 
   // Derive board visuals from live state
   const game = m.game;
@@ -147,7 +126,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
               <Pill color="cyan">BLACK · B</Pill>
               {!finished && thinking === "b" && (
                 <span className="t-label" style={{ color: "var(--phos-cyan)" }}>
-                  <span className="live-dot" style={{ background: "var(--phos-cyan)", boxShadow: "0 0 8px var(--phos-cyan)" }} /> THINKING
+                  <span className="live-dot" style={{ background: "var(--phos-cyan)" }} /> THINKING
                 </span>
               )}
               {finished && result === "b" && <Pill color="green">WINNER</Pill>}
@@ -166,17 +145,21 @@ export default function MatchPageClient({ slug }: { slug: string }) {
           </div>
         </Panel>
 
-        <Panel label="▮ MOVE LOG" right={<span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>{gameLabel}</span>}>
-          <pre style={{
-            padding: "10px 12px", fontSize: 10, lineHeight: 1.6,
-            fontFamily: "var(--font-mono)", color: "var(--ink-200)",
-            overflow: "auto", maxHeight: 260, whiteSpace: "pre-wrap",
-            background: "var(--bg-void)",
-          }}>
-            {notation.length > 0
-              ? notation.slice(-20).map((n, i) => `${moveCount - Math.min(notation.length, 20) + i + 1}. ${n}`).join("\n")
-              : "Initializing…"}
-          </pre>
+        <Panel label="▮ MATCH DETAILS" right={<span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>{gameLabel}</span>}>
+          <div style={{ padding: "10px 12px", display: "grid", gap: 8, background: "var(--bg-void)" }}>
+            {[
+              ["MATCH", `#${matchNumberFromSlug(m.slug)}`],
+              ["STATUS", finished ? "FINISHED" : "LIVE"],
+              ["MOVE", String(moveCount)],
+              ["PHASE", phase.toUpperCase()],
+              ["TO MOVE", thinking === "b" ? "BLACK" : "WHITE"],
+            ].map(([label, value]) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <span className="t-label" style={{ fontSize: 9, color: "var(--ink-400)" }}>{label}</span>
+                <span className="t-num" style={{ fontSize: 11, color: "var(--ink-100)" }}>{value}</span>
+              </div>
+            ))}
+          </div>
         </Panel>
 
         {/* Bet history panel */}
@@ -220,7 +203,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
 
                   {/* Split bar */}
                   <div style={{ display: "flex", height: 6, gap: 1 }}>
-                    <div style={{ width: `${pctA}%`, background: "var(--phos-cyan)", transition: "width 0.6s ease" }} />
+                    <div style={{ width: `${pctA}%`, background: "var(--phos-cyan)" }} />
                     <div style={{ flex: 1, background: "var(--phos-amber)" }} />
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
@@ -302,7 +285,6 @@ export default function MatchPageClient({ slug }: { slug: string }) {
                   background: active ? "rgba(5,7,13,0.6)" : "rgba(5,7,13,0.3)",
                   border: `1px solid ${borderColor}`,
                   cursor: "pointer", outline: "none",
-                  transition: "border-color 120ms, background 120ms",
                 }}>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", color: textColor, textTransform: "uppercase" }}>{handle}</span>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 26, fontWeight: 700, lineHeight: 1, color: textColor }}>{odds}<span style={{ fontSize: 14 }}>x</span></span>
@@ -314,12 +296,11 @@ export default function MatchPageClient({ slug }: { slug: string }) {
           return (
             <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
               onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
-              <div style={{ position: "absolute", inset: 0, background: "rgba(5,7,13,0.80)", backdropFilter: "blur(6px)" }} onClick={() => setModalOpen(false)} />
+              <div style={{ position: "absolute", inset: 0, background: "rgba(5,7,13,0.80)" }} onClick={() => setModalOpen(false)} />
               <div style={{
                 position: "relative", zIndex: 1, width: 380,
                 background: "linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%)",
                 border: "1px solid var(--line-bright)",
-                boxShadow: "0 0 0 1px rgba(95,240,230,0.06), 0 24px 80px rgba(0,0,0,0.7)",
               }}>
                 {/* Header */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
@@ -390,7 +371,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
                           border: `1px solid ${betStatus === "done" ? "var(--phos-green)" : betSide ? "var(--phos-cyan)" : "var(--line)"}`,
                           color: betStatus === "done" ? "var(--phos-green)" : betSide ? "var(--phos-cyan)" : "var(--ink-500)",
                           fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.18em",
-                          opacity: betSide ? 1 : 0.5, outline: "none", transition: "all 120ms",
+                          opacity: betSide ? 1 : 0.5, outline: "none",
                         }}>
                         {betStatus === "placing" ? "PLACING…" : betStatus === "done" ? "BET PLACED ✓" : "CONFIRM BET"}
                       </button>
@@ -416,7 +397,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {finished ? <Pill color="amber">FINISHED</Pill> : <LiveDot />}
               {!finished && <span className="t-label" style={{ color: "var(--phos-green)" }}>LIVE</span>}
-              <span className="t-label">ARENA 01 · HOLO</span>
+              <span className="t-label">MATCH #{matchNumberFromSlug(m.slug)}</span>
               <span className="t-label">·</span>
               <span className="t-label" style={{ color: "var(--phos-cyan)" }}>{gameLabel}</span>
             </div>
@@ -430,7 +411,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
             background: "radial-gradient(ellipse at 50% 60%, rgba(95,240,230,0.08), transparent 70%)",
             overflow: "hidden",
           }}>
-            <div style={{ position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", width: 700, height: 180, pointerEvents: "none" }}>
+              <div style={{ position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", width: 700, height: 180, pointerEvents: "none" }}>
               {[0, 1, 2, 3].map(i => (
                 <div key={i} style={{
                   position: "absolute", left: "50%", top: "50%",
@@ -443,30 +424,23 @@ export default function MatchPageClient({ slug }: { slug: string }) {
 
             {boardEl}
 
-            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-              {emojiStream.map(e => (
-                <span key={e.id} style={{ position: "absolute", bottom: 0, left: `${e.x}%`, fontSize: "clamp(18px, 5vw, 26px)", animation: `floatUp ${e.dur}s linear forwards`, filter: "drop-shadow(0 0 4px rgba(0,0,0,0.8))" }}>
-                  {e.e}
-                </span>
-              ))}
-            </div>
+            <FloatingEmojiLayer emojis={emojis || []} />
 
             <div style={{ position: "absolute", top: 16, left: 20, padding: "6px 10px", background: "rgba(5,7,13,0.75)", border: "1px solid var(--line-bright)", fontFamily: "var(--font-mono)", fontSize: 11 }}>
               <span className="t-label" style={{ fontSize: 9, color: "var(--phos-cyan)" }}>MOVE </span>
               <span className="t-num" style={{ color: "var(--ink-100)", fontSize: 14 }}>{moveCount}</span>
             </div>
 
-              <div className="arena-overlay-pill" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <span className="t-label" style={{ fontSize: 9 }}>SPECTATORS</span>
-                <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 12 }}>{m.viewers.toLocaleString()}</span>
-              </div>
+            <div className="arena-overlay-pill" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <span className="t-label" style={{ fontSize: 9 }}>MATCH</span>
+              <span className="t-num" style={{ color: "var(--phos-cyan)", fontSize: 12 }}>#{matchNumberFromSlug(m.slug)}</span>
+            </div>
 
             {finished && result && (
               <div style={{
                 position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
                 background: "rgba(5,7,13,0.92)", border: "1px solid var(--phos-cyan)",
                 padding: "24px 40px", textAlign: "center",
-                boxShadow: "0 0 60px rgba(95,240,230,0.3)",
               }}>
                 <div className="t-display" style={{ fontSize: 28, color: "var(--phos-cyan)" }}>GAME OVER</div>
                 <div className="t-label" style={{ marginTop: 8, fontSize: 14 }}>
@@ -483,13 +457,13 @@ export default function MatchPageClient({ slug }: { slug: string }) {
               <span className="t-label" style={{ color: "var(--phos-amber)" }}>{winProbW}% · {b.handle} · W</span>
             </div>
             <div style={{ display: "flex", height: 6, background: "var(--bg-void)", border: "1px solid var(--line)" }}>
-              <div style={{ width: `${winProbB}%`, background: "var(--phos-cyan)", boxShadow: "0 0 12px var(--phos-cyan-glow)", transition: "width 0.8s ease" }} />
-              <div style={{ width: `${winProbW}%`, background: "var(--phos-amber)", boxShadow: "0 0 12px var(--phos-amber-glow)", transition: "width 0.8s ease" }} />
+              <div style={{ width: `${winProbB}%`, background: "var(--phos-cyan)" }} />
+              <div style={{ width: `${winProbW}%`, background: "var(--phos-amber)" }} />
             </div>
 
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1, height: 3, background: "var(--bg-void)", position: "relative" }}>
-                <div style={{ height: "100%", width: `${Math.min((moveCount / (game === "go19" ? 280 : game === "chess" ? 200 : 80)) * 100, 100)}%`, background: "var(--phos-cyan)", transition: "width 0.8s ease" }} />
+                <div style={{ height: "100%", width: `${Math.min((moveCount / (game === "go19" ? 280 : game === "chess" ? 200 : 80)) * 100, 100)}%`, background: "var(--phos-cyan)" }} />
               </div>
               <span className="t-num" style={{ fontSize: 11, color: "var(--ink-200)" }}>MOVE {moveCount}</span>
             </div>
@@ -497,7 +471,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
         </Panel>
       </div>
 
-      {/* Right panel: Agent B stats + chat */}
+      {/* Right panel: Agent B stats + move history */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
         <Panel>
           <div style={{ padding: 14 }}>
@@ -505,7 +479,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
               <Pill color="amber">WHITE · W</Pill>
               {!finished && thinking === "w" && (
                 <span className="t-label" style={{ color: "var(--phos-amber)" }}>
-                  <span className="live-dot" style={{ background: "var(--phos-amber)", boxShadow: "0 0 8px var(--phos-amber)" }} /> THINKING
+                  <span className="live-dot" style={{ background: "var(--phos-amber)" }} /> THINKING
                 </span>
               )}
               {finished && result === "w" && <Pill color="green">WINNER</Pill>}
@@ -524,14 +498,14 @@ export default function MatchPageClient({ slug }: { slug: string }) {
           </div>
         </Panel>
 
-        <Panel label="◐ SPECTATOR CHAT" right={<span className="t-label" style={{ fontSize: 9 }}>8,934 ONLINE</span>}
+        <Panel label="▮ MOVE HISTORY" right={<span className="t-label" style={{ fontSize: 9 }}>MATCH #{matchNumberFromSlug(m.slug)}</span>}
           className="match-chat-panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <LiveChat
-            messages={(chat as ChatMessage[]) || []}
-            emojis={emojis || []}
-            canSend={isAuthenticated && !!currentUser}
-            currentUserName={chatUserName}
-            onSend={handleChatSend}
+          <MoveHistory
+            notation={notation}
+            moveCount={moveCount}
+            matchSlug={m.slug}
+            gameLabel={gameLabel}
+            maxMoves={64}
           />
         </Panel>
       </div>

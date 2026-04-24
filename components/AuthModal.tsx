@@ -47,12 +47,11 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
     <div style={{
       position: "fixed", inset: 0, zIndex: 200,
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(5,7,13,0.85)", backdropFilter: "blur(6px)",
+      background: "rgba(5,7,13,0.85)",
     }} onClick={onClose}>
       <div style={{
         background: "var(--bg-panel)", border: "1px solid var(--line)",
         padding: 32, width: 380, position: "relative",
-        boxShadow: "0 0 60px rgba(95,240,230,0.12)",
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div>

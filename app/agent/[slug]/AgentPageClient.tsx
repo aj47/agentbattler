@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Panel, Pill, AgentGlyph } from "../../../components/ui";
-import type { Agent, ProfilePnl } from "../../../lib/types";
+import type { Agent, ProfileMatch, ProfilePnl } from "../../../lib/types";
+import type { AgentProfilePrefill } from "../../../lib/agentPrefill";
 
 function fmt$(n: number) {
   const s = n < 0 ? "-" : "";
@@ -53,24 +53,19 @@ function PnlChart({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-export default function AgentPageClient({ slug }: { slug: string }) {
-  const agent = useQuery(api.queries.agentBySlug, { slug });
-  const leaderboard = useQuery(api.queries.leaderboard);
-  const matches = useQuery(api.queries.profileMatches, { agentSlug: slug });
-  const allAgents = useQuery(api.queries.allAgents);
-  const pnl = useQuery(api.queries.featuredData, { key: "profile_pnl" }) as ProfilePnl | null | undefined;
+export default function AgentPageClient({ slug, initialProfile }: { slug: string; initialProfile?: AgentProfilePrefill | null }) {
+  const profile = useQuery(api.queries.agentProfileData, { slug });
+  const visibleProfile = profile ?? initialProfile;
+  const isPrefilled = !profile && !!initialProfile;
 
-  const agentMap = useMemo(() => {
-    const m = new Map<string, Agent>();
-    (allAgents || []).forEach(a => m.set(a.slug, a as Agent));
-    return m;
-  }, [allAgents]);
+  if (!visibleProfile) return <div style={{ padding: 40 }}>LOADING…</div>;
+  if (!visibleProfile.agent) return <div style={{ padding: 40 }}>Agent not found.</div>;
 
-  if (!agent || !leaderboard) return <div style={{ padding: 40 }}>LOADING…</div>;
-
-  const a = agent as Agent;
+  const a = visibleProfile.agent as Agent;
+  const rank = visibleProfile.rank;
+  const matches = visibleProfile.matches as (ProfileMatch & { opponent: Agent | null })[];
+  const pnl = visibleProfile.pnl as ProfilePnl | null;
   const color = `var(--phos-${a.color})`;
-  const rank = (leaderboard as Agent[]).findIndex(x => x.slug === a.slug) + 1;
   const winrate = Math.round((a.wins / (a.wins + a.loss)) * 100);
 
   return (
@@ -81,6 +76,12 @@ export default function AgentPageClient({ slug }: { slug: string }) {
         <Link href="/bracket">BRACKET</Link>
         <span style={{ color: "var(--ink-400)" }}>/</span>
         <span style={{ color }}>AGENT · {a.handle}</span>
+        {isPrefilled && (
+          <>
+            <span style={{ color: "var(--ink-400)" }}>/</span>
+            <span style={{ color: "var(--ink-400)" }}>SYNCING LIVE DATA</span>
+          </>
+        )}
       </div>
 
       <Panel>
@@ -172,13 +173,13 @@ export default function AgentPageClient({ slug }: { slug: string }) {
               <span key={h} className="t-label" style={{ fontSize: 9 }}>{h}</span>
             ))}
           </div>
-          {(matches || []).map((m, i) => {
-            const opp = agentMap.get(m.opp);
+          {matches.map((m, i) => {
+            const opp = m.opponent;
             const rc = m.result === "WIN" ? "var(--phos-green)" : m.result === "LOSS" ? "var(--phos-red)" : "var(--phos-cyan)";
             const pc = m.pnl == null ? "var(--ink-400)" : m.pnl >= 0 ? "var(--phos-green)" : "var(--phos-red)";
             const pnlStr = m.pnl == null ? "—" : (m.pnl >= 0 ? "+" : "") + fmt$(m.pnl);
             return (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "90px 1fr 90px 90px 110px 70px 80px", padding: "10px 16px", borderBottom: i < (matches || []).length - 1 ? "1px solid var(--line)" : "none", alignItems: "center" }}>
+              <div key={m._id} style={{ display: "grid", gridTemplateColumns: "90px 1fr 90px 90px 110px 70px 80px", padding: "10px 16px", borderBottom: i < matches.length - 1 ? "1px solid var(--line)" : "none", alignItems: "center" }}>
                 <span className="t-mono" style={{ fontSize: 11, color: rc, fontWeight: 600, textShadow: `0 0 6px ${rc}` }}>
                   {m.result === "LIVE" ? "● LIVE" : m.result}
                 </span>

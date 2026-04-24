@@ -40,7 +40,7 @@ export function runAgentMove(agent, fen, timeoutMs = MOVE_TIMEOUT_MS) {
     const child = spawn(process.execPath, [absPath], {
       cwd: repoRoot,
       stdio: ["pipe", "pipe", "pipe"],
-      env: { PATH: process.env.PATH ?? "", NODE_ENV: "production" }
+      env: { ...process.env, NODE_ENV: "production" }
     });
 
     let stdout = "";

@@ -1,6 +1,6 @@
 "use client";
 
-import { COLOR_GLOW, COLOR_VAR } from "./helpers";
+import { COLOR_VAR } from "./helpers";
 import { GAMES_LIST, type FilterGame } from "./data";
 
 export type SortKey =
@@ -40,9 +40,7 @@ export function Toolbar({
         border: "1px solid " + (active ? COLOR_VAR[color] : "var(--line-2)"),
         color: active ? COLOR_VAR[color] : "var(--ink-300)",
         background: active ? "rgba(95,240,230,0.08)" : "transparent",
-        boxShadow: active ? "0 0 12px " + COLOR_GLOW[color] : "none",
         cursor: "pointer",
-        transition: "all 120ms var(--ease-out)",
         whiteSpace: "nowrap",
       }}
     >

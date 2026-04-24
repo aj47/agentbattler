@@ -24,13 +24,14 @@ export function TopNav() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { signOut } = useAuthActions();
   const me = useQuery(api.queries.currentUser);
+  const matchCounts = useQuery(api.queries.matchCounts);
 
   return (
     <>
       <div className="nav-shell">
         <div className="nav-brand-row">
           <Link href="/" className="nav-brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" style={{ filter: "drop-shadow(0 0 6px var(--phos-cyan))" }}>
+            <svg width="24" height="24" viewBox="0 0 24 24">
               <polygon points="12,2 22,8 22,16 12,22 2,16 2,8" fill="none" stroke="var(--phos-cyan)" strokeWidth="1.2" />
               <polygon points="12,6 18,9.5 18,14.5 12,18 6,14.5 6,9.5" fill="none" stroke="var(--phos-cyan)" strokeWidth="1" opacity="0.6" />
               <circle cx="12" cy="12" r="2" fill="var(--phos-cyan)" />
@@ -52,7 +53,6 @@ export function TopNav() {
                 <Link key={i.href} href={i.href} className="nav-link" style={{
                   color: active ? "var(--phos-cyan)" : "var(--ink-300)",
                   borderBottom: `2px solid ${active ? "var(--phos-cyan)" : "transparent"}`,
-                  textShadow: active ? "0 0 8px var(--phos-cyan-glow)" : "none",
                 }}>{i.label}</Link>
               );
             })}
@@ -62,9 +62,8 @@ export function TopNav() {
         <div className="nav-status-row">
           <div className="nav-live">
             <LiveDot />
-            <span className="t-label" style={{ color: "var(--phos-green)" }}>12 MATCHES LIVE</span>
+            <span className="t-label" style={{ color: "var(--phos-green)" }}>{matchCounts?.live ?? "—"} MATCHES LIVE</span>
           </div>
-          <span className="t-label nav-spectators">16,482 SPECTATORS</span>
 
           {me ? (
             <div style={{ position: "relative" }}>
@@ -73,7 +72,7 @@ export function TopNav() {
                 background: "var(--bg-panel)", border: "1px solid var(--line)",
                 padding: "6px 12px", cursor: "pointer",
               }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--phos-green)", boxShadow: "0 0 6px var(--phos-green)" }} />
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--phos-green)" }} />
                 <span className="t-mono" style={{ fontSize: 11, color: "var(--ink-100)" }}>
                   {(me as any).name ?? (me as any).email?.split("@")[0] ?? "ACCOUNT"}
                 </span>
@@ -85,7 +84,7 @@ export function TopNav() {
                 <div style={{
                   position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 100,
                   background: "var(--bg-panel)", border: "1px solid var(--line)",
-                  minWidth: 180, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                  minWidth: 180,
                 }}>
                   <Link href="/account" onClick={() => setShowUserMenu(false)} style={{
                     display: "block", padding: "10px 16px", fontSize: 11,

@@ -61,24 +61,23 @@ export function Pill({
 }
 
 export function AgentGlyph({ agent, size = 48, spin = true }: { agent: Agent; size?: number; spin?: boolean }) {
+  void spin;
   const c = `var(--phos-${agent.color})`;
   return (
     <div style={{ position: "relative", width: size, height: size, display: "grid", placeItems: "center", flexShrink: 0 }}>
       <div style={{
         position: "absolute", inset: 0, border: `1px solid ${c}`, borderRadius: "50%", opacity: 0.6,
-        animation: spin ? "rot 12s linear infinite" : "none",
         clipPath: "polygon(0 0, 100% 0, 100% 50%, 80% 50%, 80% 55%, 100% 55%, 100% 100%, 0 100%)",
       }} />
       <div style={{
         position: "absolute", inset: 4, border: `1px dashed ${c}`, borderRadius: "50%", opacity: 0.3,
-        animation: spin ? "rot 20s linear infinite reverse" : "none",
       }} />
       <div style={{
         position: "absolute", inset: 6, borderRadius: "50%",
-        background: `radial-gradient(circle, ${c} 0%, transparent 70%)`, opacity: 0.25, filter: "blur(4px)",
+        background: `radial-gradient(circle, ${c} 0%, transparent 70%)`, opacity: 0.12,
       }} />
       <span style={{
-        fontSize: size * 0.5, color: c, textShadow: `0 0 12px ${c}`,
+        fontSize: size * 0.5, color: c,
         fontFamily: "var(--font-display)", fontWeight: 700, zIndex: 1,
       }}>{agent.glyph}</span>
     </div>
