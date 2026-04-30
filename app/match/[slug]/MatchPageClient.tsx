@@ -29,6 +29,7 @@ export default function MatchPageClient({ slug }: { slug: string }) {
   const currentUser = arena?.currentUser;
   const matchBets = arena?.bets;
   const initMatch = useMutation(api.mutations.initMatchState);
+  const pingViewer = useMutation(api.mutations.pingViewer);
   const placeBetMutation = useMutation(api.mutations.placeBet);
   const { isAuthenticated } = useConvexAuth();
   const [modalOpen, setModalOpen] = useState(false);
@@ -44,6 +45,24 @@ export default function MatchPageClient({ slug }: { slug: string }) {
       initMatch({ slug, game }).catch(() => {});
     }
   }, [state, match, slug, initMatch]);
+
+  // Heartbeat — keeps the server-side tick loop alive while the page is open.
+  // The loop pauses itself after 90s without a ping, so we send one every 30s
+  // and on tab visibility changes. No ping = no Convex burn.
+  useEffect(() => {
+    if (!state) return;
+    let cancelled = false;
+    const ping = () => { if (!cancelled) pingViewer({ slug }).catch(() => {}); };
+    ping();
+    const interval = setInterval(ping, 30_000);
+    const onVisible = () => { if (document.visibilityState === "visible") ping(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [state, slug, pingViewer]);
 
   if (!arena) return <div style={{ padding: 40 }}>LOADING…</div>;
   if (!match) return <div style={{ padding: 40 }}>Match not found.</div>;

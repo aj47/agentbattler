@@ -21,6 +21,16 @@ const MOVE_DELAY: Record<string, number> = {
   checkers: 3000,
 };
 
+// If no client has pinged the match in this window, the tick loop pauses
+// (returns without rescheduling). The next viewer's `pingViewer` call will
+// resume it. Keeps Convex usage proportional to actual eyeballs.
+const VIEWER_IDLE_MS = 90_000;
+
+function isViewerActive(state: { lastViewerAt?: number }) {
+  if (!state.lastViewerAt) return false;
+  return Date.now() - state.lastViewerAt < VIEWER_IDLE_MS;
+}
+
 async function getActiveMatchStates(ctx: any, limit: number) {
   const [opening, midgame, endgame] = await Promise.all([
     ctx.db.query("matchStates").withIndex("by_phase", (q: any) => q.eq("phase", "opening")).take(limit),
@@ -123,7 +133,11 @@ async function finalizeMove(
       );
       if (next) await ctx.db.patch(next._id, { status: "featured" });
     }
-    await ctx.scheduler.runAfter(30_000, internal.simulation.resetMatch, { slug });
+    // Only auto-recycle if a viewer was recently active. Otherwise the match
+    // stays finished until someone visits — pingViewer triggers the reset.
+    if (isViewerActive(state)) {
+      await ctx.scheduler.runAfter(30_000, internal.simulation.resetMatch, { slug });
+    }
   }
 
   const newMoveCount = state.moveCount + 1;
@@ -142,7 +156,7 @@ async function finalizeMove(
     });
   }
 
-  if (result.phase !== "finished") {
+  if (result.phase !== "finished" && isViewerActive(state)) {
     const delay = MOVE_DELAY[state.game] ?? 2500;
     await ctx.scheduler.runAfter(delay, internal.simulation.tick, { slug });
   }
@@ -248,6 +262,9 @@ export const tick = internalMutation({
       .first();
 
     if (!state || state.phase === "finished") return;
+
+    // Pause the tick loop when nobody's watching. Resumed by pingViewer.
+    if (!isViewerActive(state)) return;
 
     // If the player on the move is a submitted agent with source code, delegate
     // the move computation to the Node-runtime engine action. It'll evaluate
