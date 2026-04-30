@@ -58,6 +58,9 @@ export default defineSchema({
     ),
     result: v.optional(v.union(v.literal("b"), v.literal("w"), v.literal("draw"))),
     lastMoveAt: v.number(),
+    // Updated whenever a client pings — the tick loop pauses if this falls
+    // far enough behind that no one is watching, so idle matches don't burn.
+    lastViewerAt: v.optional(v.number()),
   }).index("by_slug", ["matchSlug"]).index("by_phase", ["phase"]),
 
   agents: defineTable({

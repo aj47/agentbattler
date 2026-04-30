@@ -20,15 +20,28 @@ export const initMatchState = mutation({
     game: v.union(v.literal("chess"), v.literal("go19"), v.literal("checkers")),
   },
   handler: async (ctx, { slug, game }) => {
+    const now = Date.now();
+    const delay = game === "go19" ? 2000 : game === "chess" ? 1500 : 1200;
+
     const existing = await ctx.db
       .query("matchStates")
       .withIndex("by_slug", q => q.eq("matchSlug", slug))
       .first();
-    if (existing) return existing._id;
+    if (existing) {
+      // Mark viewer active. If the tick loop paused (no viewer in 60s+) and
+      // the match is still going, kick it back off. Idempotent on revisit.
+      const wasIdle = !existing.lastViewerAt || now - existing.lastViewerAt > 60_000;
+      await ctx.db.patch(existing._id, { lastViewerAt: now });
+      if (wasIdle && existing.phase !== "finished") {
+        await ctx.scheduler.runAfter(delay, internal.simulation.tick, { slug });
+      }
+      return existing._id;
+    }
 
-    // Cap concurrent simulations to avoid overwhelming the scheduler
-    const activeCount = await countActiveMatchStates(ctx, 10);
-    if (activeCount >= 10) return null;
+    // Cap concurrent simulations. Lowered from 10 → 4 to keep Convex usage
+    // proportional to actual viewers and avoid runaway scheduler chains.
+    const activeCount = await countActiveMatchStates(ctx, 4);
+    if (activeCount >= 4) return null;
 
     const board = getInitialBoard(game);
     const id = await ctx.db.insert("matchStates", {
@@ -42,14 +55,39 @@ export const initMatchState = mutation({
       capturesW: 0,
       winProbB: 0.5,
       phase: "opening",
-      lastMoveAt: Date.now(),
+      lastMoveAt: now,
+      lastViewerAt: now,
     });
 
-    // Kick off the simulation loop on the server
-    const delay = game === "go19" ? 2000 : game === "chess" ? 1500 : 1200;
     await ctx.scheduler.runAfter(delay, internal.simulation.tick, { slug });
 
     return id;
+  },
+});
+
+// Heartbeat from a mounted match-page client. Updates lastViewerAt so the
+// tick loop knows the match still has eyeballs. If the loop had already
+// paused (or the match is finished and reset hasn't fired), this resumes it.
+// Cheap by design — no auth, no logging, single patch + maybe one scheduler
+// call. Spam-safe because patches are idempotent.
+export const pingViewer = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const now = Date.now();
+    const state = await ctx.db
+      .query("matchStates")
+      .withIndex("by_slug", q => q.eq("matchSlug", slug))
+      .first();
+    if (!state) return null;
+
+    const wasIdle = !state.lastViewerAt || now - state.lastViewerAt > 60_000;
+    await ctx.db.patch(state._id, { lastViewerAt: now });
+
+    if (wasIdle && state.phase !== "finished") {
+      const delay = state.game === "go19" ? 2000 : state.game === "chess" ? 1500 : 1200;
+      await ctx.scheduler.runAfter(delay, internal.simulation.tick, { slug });
+    }
+    return state._id;
   },
 });
 
