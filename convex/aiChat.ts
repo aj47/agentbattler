@@ -6,6 +6,51 @@ import { v } from "convex/values";
 const CHAT_INTERVAL_MIN = 15_000;
 const CHAT_INTERVAL_MAX = 22_000;
 
+// Cheapest Claude model — used via the vibetoken.lol Anthropic-compatible
+// proxy. Override via env if needed.
+const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
+
+// Call the Anthropic Messages API (or any compatible base URL) and return the
+// joined text content, or null on any failure. Returns null silently — chat
+// is non-critical and the local generator is the fallback path.
+async function callAnthropic(opts: {
+  system: string;
+  user: string;
+  maxTokens: number;
+  temperature?: number;
+}): Promise<string | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+  const base = (process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com").replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/v1/messages`, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: opts.maxTokens,
+        temperature: opts.temperature ?? 1.0,
+        system: opts.system,
+        messages: [{ role: "user", content: opts.user }],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { content?: Array<{ type?: string; text?: string }> };
+    const text = (data.content ?? [])
+      .filter(c => c?.type === "text" && typeof c.text === "string")
+      .map(c => c.text!.trim())
+      .join("\n")
+      .trim();
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
 // Spectator personas — each has a distinct voice
 const PERSONAS = [
   { user: "goGremlin",    tier: "vip",  style: "Go expert, uses proper terminology (joseki, sente, gote, influence), gets hyped" },
@@ -38,8 +83,7 @@ export const generateChatMessages = internalAction({
     capturesW: v.number(),
   },
   handler: async (ctx, args) => {
-    const apiKey = process.env.Z_AI_API_KEY;
-    if (!apiKey) return;
+    if (!process.env.ANTHROPIC_API_KEY) return;
 
     // Pick 1-2 random personas
     const shuffled = [...PERSONAS].sort(() => Math.random() - 0.5);
@@ -75,27 +119,12 @@ ${chosen.map((p, i) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`)
 Reply with ONLY the messages, one per line, no labels, no quotes, no extra text.`;
 
     try {
-      const res = await fetch("https://api.z.ai/api/coding/paas/v4/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "GLM-4.7-Flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user",   content: userPrompt },
-          ],
-          max_tokens: 2000,
-          temperature: 0.95,
-        }),
+      const content = await callAnthropic({
+        system: systemPrompt,
+        user: userPrompt,
+        maxTokens: 400,
+        temperature: 0.95,
       });
-
-      if (!res.ok) return;
-
-      const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
-      const content = data.choices?.[0]?.message?.content?.trim();
       if (!content) return;
 
       const lines = content.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l.length <= 180);
@@ -204,42 +233,23 @@ export const chatLoopTick = internalAction({
     const shuffled = [...PERSONAS].sort(() => Math.random() - 0.5);
     const chosen = shuffled.slice(0, count);
 
-    const apiKey = process.env.Z_AI_API_KEY;
     let aiLines: string[] | null = null;
 
-    if (apiKey) {
+    if (process.env.ANTHROPIC_API_KEY) {
       const gameLabel = match.game === "go19" ? "Go 19×19" : match.game === "chess" ? "Chess" : "Checkers";
       const winPctA = Math.round(state.winProbB * 100);
       const winPctB = 100 - winPctA;
 
-      try {
-        const res = await fetch("https://api.z.ai/api/coding/paas/v4/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "GLM-4.7-Flash",
-            messages: [
-              { role: "system", content: `You generate Twitch-style spectator chat for AgentBattler, an AI agent game platform. Think fast, chaotic, funny, nerdy — like a real gaming stream chat. Keep it authentic and varied.` },
-              { role: "user", content: `Generate ${count} chat message${count > 1 ? "s" : ""} for this moment:\n\nGame: ${gameLabel} | Match #${match.slug?.slice(1)}\n${match.a} (${winPctA}% win) vs ${match.b} (${winPctB}% win)\nMove ${state.moveCount} | Phase: ${state.phase?.toUpperCase()}\n\n${chosen.map((p: any, i: number) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`).join("\n")}\n\nReply with ONLY the messages, one per line, no labels, no quotes. Max 80 chars each.` },
-            ],
-            max_tokens: 6000,
-            temperature: 1.0,
-          }),
-        });
+      const content = await callAnthropic({
+        system: `You generate Twitch-style spectator chat for AgentBattler, an AI agent game platform. Think fast, chaotic, funny, nerdy — like a real gaming stream chat. Keep it authentic and varied.`,
+        user: `Generate ${count} chat message${count > 1 ? "s" : ""} for this moment:\n\nGame: ${gameLabel} | Match #${match.slug?.slice(1)}\n${match.a} (${winPctA}% win) vs ${match.b} (${winPctB}% win)\nMove ${state.moveCount} | Phase: ${state.phase?.toUpperCase()}\n\n${chosen.map((p: any, i: number) => `Message ${i + 1} — persona "${p.user}" (${p.style}):`).join("\n")}\n\nReply with ONLY the messages, one per line, no labels, no quotes. Max 80 chars each.`,
+        maxTokens: 400,
+        temperature: 1.0,
+      });
 
-        if (res.ok) {
-          const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
-          const content = data.choices?.[0]?.message?.content?.trim();
-          if (content) {
-            const lines = content.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 2 && l.length <= 180);
-            if (lines.length > 0) aiLines = lines;
-          }
-        }
-      } catch {
-        // fall through to local generator
+      if (content) {
+        const lines = content.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 2 && l.length <= 180);
+        if (lines.length > 0) aiLines = lines;
       }
     }
 
